@@ -9,7 +9,8 @@ import {
   where, 
   updateDoc, 
   doc, 
-  Timestamp 
+  Timestamp,
+  serverTimestamp
 } from "firebase/firestore";
 import { adminStore, AdminUser } from "@/lib/admin-store";
 import { withTimeout } from "@/lib/api-utils";
@@ -67,28 +68,33 @@ export default function UnifiedUserManagementPage() {
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const normalizedEmail = newStaff.email.trim().toLowerCase();
+    const displayName = newStaff.full_name.trim();
 
     if (db && mode === 'cloud') {
       try {
-        const q = query(collection(db, 'profiles'), where('email', '==', newStaff.email));
-        const snap = await getDocs(q);
-
+        let snap = await getDocs(query(collection(db, 'profiles'), where('email', '==', normalizedEmail)));
+        if (snap.empty && normalizedEmail !== newStaff.email.trim()) {
+          snap = await getDocs(query(collection(db, 'profiles'), where('email', '==', newStaff.email.trim())));
+        }
+        
         if (!snap.empty) {
           const profileDoc = snap.docs[0];
           await updateDoc(doc(db, 'profiles', profileDoc.id), { 
              role: 'staff', 
-             full_name: newStaff.full_name || profileDoc.data().full_name 
+             full_name: displayName || profileDoc.data().full_name,
+             updated_at: serverTimestamp()
           });
           
-          alert(`✅ Account detected: ${newStaff.email} elevated to Staff!`);
+          alert(`✅ Account detected: ${normalizedEmail} elevated to Staff!`);
         } else {
-          alert(`📢 No matching account found for ${newStaff.email}.\n\The user must sign up first at /auth/signup.`);
+          alert(`📢 No matching account found for ${normalizedEmail}.\nThe user must sign up first at /auth/signup.`);
         }
       } catch (err: any) {
         alert("❌ Cloud promotion failed: " + err.message);
       }
     } else {
-      adminStore.createUser(newStaff.email, newStaff.full_name, 'staff');
+      adminStore.createUser(normalizedEmail, displayName, 'staff');
     }
 
     setNewStaff({ full_name: '', email: '' });
@@ -99,7 +105,7 @@ export default function UnifiedUserManagementPage() {
   const handleRoleChange = async (id: string, role: string, source?: string) => {
     if (mode === 'cloud' && db && source !== 'local') {
       try {
-        await updateDoc(doc(db, 'profiles', id), { role });
+        await updateDoc(doc(db, 'profiles', id), { role, updated_at: serverTimestamp() });
         fetchUsers();
         return;
       } catch (err) {
