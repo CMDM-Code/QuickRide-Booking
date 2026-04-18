@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import logo from "@/assets/images/quickride_logo.png";
+import { clearPortalSession } from "@/lib/portal-auth";
 
 const AdminSidebar = () => {
   const pathname = usePathname();
@@ -96,7 +97,7 @@ const AdminSidebar = () => {
           <div className="p-6 border-t border-white/5 bg-black/20">
             <button
               onClick={() => {
-                localStorage.removeItem('quickride_admin_session');
+                clearPortalSession();
                 window.location.href = '/admin-login';
               }}
               className="flex items-center space-x-4 w-full px-4 py-3 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-400/5 transition-all font-bold group"
