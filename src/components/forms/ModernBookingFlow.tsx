@@ -1184,7 +1184,8 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
   async function handleFinalConfirm() {
     const user = authClient.getCurrentUser();
     
-    if (!db) {
+    const firestore = db;
+    if (!firestore) {
        alert("Firebase is not initialized.");
        return;
     }
@@ -1198,7 +1199,7 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
          const start = new Date(`${req.details.startDate}T${req.details.startTime}`);
          const end = new Date(`${req.details.endDate}T${req.details.endTime}`);
          
-         const ref = doc(db, 'bookings', existingBooking.id);
+         const ref = doc(firestore, 'bookings', existingBooking.id);
          await updateDoc(ref, {
             car_id: req.car.id,
             start_date: Timestamp.fromDate(start),
@@ -1216,7 +1217,7 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
           const start = new Date(`${req.details.startDate}T${req.details.startTime}`);
           const end = new Date(`${req.details.endDate}T${req.details.endTime}`);
           
-          return addDoc(collection(db, 'bookings'), {
+          return addDoc(collection(firestore, 'bookings'), {
             user_id: user?.id || 'guest_booking',
             car_id: req.car.id,
             start_date: Timestamp.fromDate(start),

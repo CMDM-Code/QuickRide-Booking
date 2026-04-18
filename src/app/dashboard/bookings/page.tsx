@@ -23,6 +23,7 @@ export default function BookingsPage() {
   }, []);
 
   const fetchBookings = async (userId: string) => {
+    if (!db) return;
     try {
       // 1. Fetch all vehicles to map IDs to names
       const vSnap = await getDocs(collection(db, 'vehicles'));
@@ -88,6 +89,7 @@ export default function BookingsPage() {
     if (!confirm("Are you sure you want to cancel this booking?")) return;
     
     try {
+        if (!db) return;
         const ref = doc(db, 'bookings', id);
         await updateDoc(ref, { status: 'cancelled' });
         

@@ -119,26 +119,27 @@ function getLocalStats(): DashboardStats {
 }
 
 export async function fetchRecentActivity() {
-  if (!db) return adminStore.getSecurityLogs().slice(0, 5);
+    const firestore = db;
+    if (!firestore) return adminStore.getSecurityLogs().slice(0, 5);
 
-  try {
-    const q = query(collection(db, 'bookings'), orderBy('created_at', 'desc'), limit(8));
-    const snap = await withTimeout(getDocs(q), 3000);
+    try {
+      const q = query(collection(firestore, 'bookings'), orderBy('created_at', 'desc'), limit(8));
+      const snap = await withTimeout(getDocs(q), 3000);
 
-    const activities = await Promise.all(snap.docs.map(async (docRef) => {
-        const b = docRef.data();
-        let userName = 'Guest Customer';
-        
-        if (b.user_id) {
-            try {
-                const profileSnap = await getDoc(doc(db, 'profiles', b.user_id));
-                if (profileSnap.exists()) {
-                    userName = profileSnap.data().full_name || profileSnap.data().email || userName;
-                }
-            } catch (e) {
-                console.warn("Could not fetch profile for activity:", b.user_id);
-            }
-        }
+      const activities = await Promise.all(snap.docs.map(async (docRef) => {
+          const b = docRef.data();
+          let userName = 'Guest Customer';
+          
+          if (b.user_id) {
+              try {
+                  const profileSnap = await getDoc(doc(firestore, 'profiles', b.user_id));
+                  if (profileSnap.exists()) {
+                      userName = profileSnap.data().full_name || profileSnap.data().email || userName;
+                  }
+              } catch (e) {
+                  console.warn("Could not fetch profile for activity:", b.user_id);
+              }
+          }
 
         const createdAt = b.created_at instanceof Timestamp ? b.created_at.toDate() : new Date(b.created_at);
 

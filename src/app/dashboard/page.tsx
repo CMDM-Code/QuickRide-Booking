@@ -141,8 +141,8 @@ export default function DashboardPage() {
                   <div>
                     <p className="text-slate-400 mb-1">Duration</p>
                     <p className="text-slate-900">
-                      {(booking.start_date?.toDate ? booking.start_date.toDate() : new Date(booking.start_date)).toLocaleDateString()} –{' '}
-                      {(booking.end_date?.toDate ? booking.end_date.toDate() : new Date(booking.end_date)).toLocaleDateString()}
+                      {(typeof (booking.start_date as any)?.toDate === 'function' ? (booking.start_date as any).toDate() : new Date(booking.start_date)).toLocaleDateString()} –{' '}
+                      {(typeof (booking.end_date as any)?.toDate === 'function' ? (booking.end_date as any).toDate() : new Date(booking.end_date)).toLocaleDateString()}
                     </p>
                   </div>
                   <div>
@@ -160,7 +160,7 @@ export default function DashboardPage() {
                 {booking.status !== 'cancelled' && booking.status !== 'completed' && (
                   <>
                     <button 
-                        onClick={() => handleEditRequest(booking)}
+                        onClick={() => handleEditRequest()}
                         className="px-6 py-3 bg-green-700 text-white rounded-xl font-bold hover:bg-green-800 transition-all text-sm"
                     >
                         {booking.status === 'pending' ? 'Edit Request' : 'Request Changes'}

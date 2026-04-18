@@ -242,6 +242,7 @@ export default function BookingForm() {
   };
 
   const handleConfirm = async () => {
+    if (!db) return;
     try {
       const user = authClient.getCurrentUser();
       if (!user) {

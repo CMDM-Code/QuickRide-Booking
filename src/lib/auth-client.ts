@@ -79,8 +79,13 @@ export const authClient = {
   },
 
   async signup(name: string, email: string, password: string) {
+    const authInstance = auth;
+    if (!authInstance) {
+        // Fallback to local handled in catch block
+        throw new Error("auth/not-initialized");
+    }
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(authInstance, email, password);
       const firebaseUser = userCredential.user;
       
       const userData = {
@@ -98,7 +103,8 @@ export const authClient = {
       console.error("Signup error:", error);
       
       // Fallback to local if Firebase is not configured or fails
-      if (error.code === 'auth/network-request-failed' || !auth.app) {
+      const authInstance = auth;
+      if (error.code === 'auth/network-request-failed' || !authInstance || !authInstance.app) {
           const users = getUsers();
           if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
             return { success: false, error: "Email already exists" };
@@ -124,8 +130,12 @@ export const authClient = {
   },
 
   async login(email: string, password: string) {
+    const authInstance = auth;
+    if (!authInstance) {
+        throw new Error("auth/not-initialized");
+    }
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(authInstance, email, password);
       const firebaseUser = userCredential.user;
       
       const userData = {
@@ -160,8 +170,13 @@ export const authClient = {
   },
 
   async logout() {
+    const authInstance = auth;
+    if (!authInstance) {
+        setSession(null);
+        return { success: true };
+    }
     try {
-      await signOut(auth);
+      await signOut(authInstance);
     } catch (error: any) {
       console.error("Logout error:", error);
     }
