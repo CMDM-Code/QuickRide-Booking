@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "@/components/layout/AdminSidebar";
+import { getPortalSession } from "@/lib/portal-auth";
 
 export default function AdminLayout({
   children,
@@ -14,16 +15,15 @@ export default function AdminLayout({
 
   useEffect(() => {
     try {
-      const session = localStorage.getItem('quickride_admin_session');
+      const session = getPortalSession();
       if (!session) {
         router.push("/admin-login");
+        return;
+      }
+      if (session.authenticated === true && session.role === 'admin') {
+        setIsVerified(true);
       } else {
-        const data = JSON.parse(session);
-        if (data.authenticated === true) {
-          setIsVerified(true);
-        } else {
-          router.push("/admin-login");
-        }
+        router.push("/admin-login");
       }
     } catch {
       router.push("/admin-login");

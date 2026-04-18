@@ -555,13 +555,15 @@ function BookingDetailsStage({
   onChange,
   onBack,
   onNext,
-  carId
+  carId,
+  excludeBookingId
 }: {
   details: BookingDetails;
   onChange: (d: BookingDetails) => void;
   onBack: () => void;
   onNext: () => void;
   carId: string;
+  excludeBookingId?: string;
 }) {
   const [dateTimeError, setDateTimeError] = useState<string>('');
   const [availabilityWarning, setAvailabilityWarning] = useState<string>('');
@@ -571,10 +573,12 @@ function BookingDetailsStage({
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    if (details.startDate && details.endDate && valid) {
+    if (details.startDate && details.startTime && details.endDate && details.endTime && !dateTimeError) {
        checkOverlap();
+    } else {
+      setAvailabilityWarning('');
     }
-  }, [details.startDate, details.startTime, details.endDate, details.endTime]);
+  }, [carId, details.startDate, details.startTime, details.endDate, details.endTime, dateTimeError, excludeBookingId]);
 
   async function checkOverlap() {
     if (!db) return;
@@ -588,6 +592,7 @@ function BookingDetailsStage({
       
       const snap = await getDocs(q);
       const conflicts = snap.docs.filter((docRef: any) => {
+          if (excludeBookingId && docRef.id === excludeBookingId) return false;
           const b = docRef.data();
           const bStart = b.start_date instanceof Timestamp ? b.start_date.toDate() : new Date(b.start_date);
           const bEnd = b.end_date instanceof Timestamp ? b.end_date.toDate() : new Date(b.end_date);
@@ -623,6 +628,7 @@ function BookingDetailsStage({
     if (field === 'startDate' && newDetails.endDate && value > newDetails.endDate) newDetails.endDate = value;
     const error = validateDateTime(newDetails);
     setDateTimeError(error);
+    if (error) setAvailabilityWarning('');
     onChange(newDetails);
   }
 
@@ -1307,6 +1313,7 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
                onBack={() => setStage('destinations')}
                onNext={() => setStage('confirmation')}
                carId={selectedCar!.id}
+               excludeBookingId={editMode ? existingBooking?.id : undefined}
              />
           ) : stage === 'confirmation' ? (
              <ConfirmationStage
