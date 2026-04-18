@@ -1,37 +1,52 @@
 'use client';
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
-import bcrypt from 'bcryptjs';
+import { doc, getDoc } from "firebase/firestore";
+import { authClient } from "@/lib/auth-client";
+import { db } from "@/lib/firebase";
+import { setPortalSession } from "@/lib/portal-auth";
 import logo from "@/assets/images/quickride_logo.png";
-
-const STAFF_PASSWORD_HASH = "$2b$08$kHeMZDCbidXchSuw4aBEyuihBBHb0zqjCdnSGspNdPSCa6sZWUXDe";
-const STAFF_USERNAME = "staff@quickridebooking.com";
 
 export default function StaffLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
+    try {
+      const loginResult = await authClient.login(email.trim(), password);
+      if (!loginResult.success || !loginResult.user) {
+        setError(loginResult.error || "Invalid credentials.");
+        return;
+      }
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+      if (!db) {
+        setError("Authentication service unavailable. Please try again.");
+        return;
+      }
 
-    if (email === STAFF_USERNAME && password === "staff321") {
-      localStorage.setItem('quickride_staff_session', JSON.stringify({ 
-        authenticated: true, 
-        loginTime: new Date().toISOString(),
-        userAgent: navigator.userAgent
-      }));
-      window.location.href = "/staff/dashboard";
-    } else {
-      setError("Invalid staff credentials");
+      const profileSnap = await getDoc(doc(db, 'profiles', loginResult.user.id));
+      const role = (profileSnap.exists() ? profileSnap.data()?.role : null) as string | null;
+      
+    if (role === 'staff' || role === 'admin') {
+        setPortalSession({
+          role: role === 'admin' ? 'admin' : 'staff',
+          userId: loginResult.user.id,
+          email: loginResult.user.email
+        });
+        window.location.href = "/staff/dashboard";
+        return;
+      }
+
+      setError("This account is not assigned as staff.");
+    } catch (err: any) {
+      setError(err?.message || "Failed to authenticate.");
+    } finally {
       setIsLoading(false);
     }
   };
