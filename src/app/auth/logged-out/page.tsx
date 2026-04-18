@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import logo from "@/assets/images/quickride_logo.png";
 
 export default function LoggedOutPage() {
   const [countdown, setCountdown] = useState(5);
@@ -28,23 +29,15 @@ export default function LoggedOutPage() {
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-50 py-6 px-8">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-green-700 to-green-600 rounded-xl flex items-center justify-center">
-            <svg
-              className="w-6 h-6 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 12h14M12 5l7 7-7 7"
-              />
-            </svg>
+          <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0">
+            <Image 
+              src={logo} 
+              alt="QuickRide Booking" 
+              className="w-full h-full object-contain"
+            />
           </div>
           <span className="text-xl font-bold text-white tracking-tight">
-            Quick Ride Booking
+            QuickRide Booking
           </span>
         </div>
       </header>
@@ -66,7 +59,7 @@ export default function LoggedOutPage() {
                 Your journey is saved.
               </div>
               <h2 className="text-4xl md:text-5xl font-bold text-white leading-tight">
-                Quick Ride Booking ensures your preferences and bookings are secured for your next high-performance experience.
+                QuickRide Booking ensures your preferences and bookings are secured for your next high-performance experience.
               </h2>
             </div>
           </div>
@@ -93,7 +86,7 @@ export default function LoggedOutPage() {
 
             <h1 className="text-3xl font-bold text-slate-900 mb-4">You have been safely logged out.</h1>
             <p className="text-slate-600 mb-12 leading-relaxed">
-              Thank you for choosing Quick Ride Booking. We look forward to seeing you in the driver&apos;s seat again soon.
+              Thank you for choosing QuickRide Booking. We look forward to seeing you in the driver&apos;s seat again soon.
             </p>
 
             {/* Countdown Timer */}
@@ -135,7 +128,7 @@ export default function LoggedOutPage() {
             <a href="#" className="hover:text-green-400 transition-colors">Security</a>
           </div>
           <p className="text-sm text-slate-400">
-            © 2024 Quick Ride Booking Automotive Group.
+            © 2026 QuickRide Booking Automotive Group.
           </p>
         </div>
       </footer>

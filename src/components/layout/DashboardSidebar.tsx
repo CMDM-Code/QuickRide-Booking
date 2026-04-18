@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import Image from "next/image";
+import logo from "@/assets/images/quickride_logo.png";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: "📊" },
@@ -57,13 +59,15 @@ const Sidebar = () => {
           {/* Brand Header */}
           <div className="p-8 pb-6">
             <Link href="/" className="flex items-center space-x-3 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-700 rounded-xl flex items-center justify-center shadow-lg shadow-green-600/20 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 2l-7 10h5v8h4v-8h5L12 2z" />
-                </svg>
+              <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 group-hover:scale-110 transition-transform">
+                <Image 
+                  src={logo} 
+                  alt="QuickRide Booking" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
-                <span className="text-xl font-black text-white tracking-tighter block leading-none">QUICK RIDE</span>
+                <span className="text-xl font-black text-white tracking-tighter block leading-none">QuickRide Booking</span>
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-green-500/80">Premium Access</span>
               </div>
             </Link>
@@ -110,7 +114,7 @@ const Sidebar = () => {
             <span>Back to Main Site</span>
           </Link>
           <div className="mt-4 text-center">
-            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">© 2026 Quick Ride Booking</p>
+            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">© 2026 QuickRide Booking</p>
           </div>
         </div>
       </aside>

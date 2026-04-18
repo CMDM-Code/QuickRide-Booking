@@ -16,7 +16,7 @@ interface SystemSettings {
 }
 
 const DEFAULT_SETTINGS: SystemSettings = {
-  companyName: 'Quick Ride Booking',
+  companyName: 'QuickRide Booking',
   supportEmail: 'support@quickridebooking.com',
   supportPhone: '+63 XXX XXX XXXX',
   currency: 'PHP',

@@ -15,7 +15,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Quick Ride Booking",
+  title: "QuickRide Booking",
   description: "Premium car rental service with the motto: Comfort on the Road, Joy in Every Mile",
 };
 

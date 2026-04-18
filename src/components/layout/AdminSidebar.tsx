@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
+import logo from "@/assets/images/quickride_logo.png";
 
 const AdminSidebar = () => {
   const pathname = usePathname();
@@ -47,13 +49,15 @@ const AdminSidebar = () => {
           {/* Brand Header */}
           <div className="p-8 pb-6 border-b border-white/5">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-green-800 rounded-xl flex items-center justify-center shadow-lg shadow-green-900/40">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
+              <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-lg shadow-green-900/40">
+                <Image 
+                  src={logo} 
+                  alt="QuickRide Booking" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
-                <span className="text-xl font-black text-white tracking-tighter block leading-none">QUICK RIDE</span>
+                <span className="text-xl font-black text-white tracking-tighter block leading-none">QuickRide Booking</span>
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500">Admin Control</span>
               </div>
             </div>

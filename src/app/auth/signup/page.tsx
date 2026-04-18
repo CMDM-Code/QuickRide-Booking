@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import logo from "@/assets/images/quickride_logo.png";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -47,15 +48,15 @@ export default function SignupPage() {
       <header className="absolute top-0 left-0 right-0 z-50 py-6 px-8">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 rounded-xl overflow-hidden">
-              <img 
-                src="https://assets.kiloapps.io/user_bc07d79b-502e-47d8-aa85-a2d78aa3c851/54e7622e-04e6-46b6-a8bb-b9d5f9a95743/368d7c42-20fd-4323-9ff9-f3b76d6ff19f.png" 
-                alt="Quick Ride Booking" 
-                className="w-full h-full object-cover"
+            <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0">
+              <Image 
+                src={logo} 
+                alt="QuickRide Booking" 
+                className="w-full h-full object-contain"
               />
             </div>
             <span className="text-xl font-bold text-slate-900 lg:text-white tracking-tight">
-              Quick Ride Booking
+              QuickRide Booking
             </span>
           </div>
           <Link href="/" className="flex items-center space-x-2 text-slate-500 hover:text-green-700 transition-colors">
@@ -264,7 +265,7 @@ export default function SignupPage() {
             <a href="#" className="hover:text-green-400 transition-colors">Security</a>
           </div>
           <p className="text-sm text-slate-400">
-            © {new Date().getFullYear()} Quick Ride Booking Automotive Group.
+            © {new Date().getFullYear()} QuickRide Booking Automotive Group.
           </p>
         </div>
       </footer>

@@ -5,7 +5,7 @@ export default function MaintenancePage() {
         <div className="text-6xl mb-6">🔧</div>
         <h1 className="text-3xl font-bold text-slate-900">Under Maintenance</h1>
         <p className="text-slate-600 mt-4 mb-8">
-          Quick Ride Booking is currently undergoing scheduled maintenance.
+          QuickRide Booking is currently undergoing scheduled maintenance.
           We'll be back online shortly. Thank you for your patience.
         </p>
         <p className="text-sm text-slate-500">

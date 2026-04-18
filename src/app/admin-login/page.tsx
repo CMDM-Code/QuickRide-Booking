@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import logo from "@/assets/images/quickride_logo.png";
 
 const ADMIN_EMAIL = "admin@quickridebooking.com";
 const ADMIN_PASSWORD_HASH = "$2b$08$n53gG7hH9jK0lL1mN2oP3qR4sT5uV6wX7yZ8aB9cD0eF1gH2iJ3kL4mN5oP6qR7sT9";
@@ -34,13 +36,13 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-2xl overflow-hidden mx-auto mb-6 shadow-lg shadow-green-700/30">
-            <img 
-              src="https://assets.kiloapps.io/user_bc07d79b-502e-47d8-aa85-a2d78aa3c851/54e7622e-04e6-46b6-a8bb-b9d5f9a95743/368d7c42-20fd-4323-9ff9-f3b76d6ff19f.png" 
-              alt="Quick Ride Booking" 
-              className="w-full h-full object-cover"
+            <Image 
+              src={logo} 
+              alt="QuickRide Booking" 
+              className="w-full h-full object-contain"
             />
           </div>
-          <h1 className="text-3xl font-bold text-white">Quick Ride Booking</h1>
+          <h1 className="text-3xl font-bold text-white">QuickRide Booking</h1>
           <p className="text-green-300 mt-2">Administrator Portal</p>
         </div>
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import logo from "@/assets/images/quickride_logo.png";
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState("");
@@ -18,23 +19,15 @@ export default function ResetPasswordPage() {
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-50 py-6 px-8">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-green-700 to-green-600 rounded-xl flex items-center justify-center">
-            <svg
-              className="w-6 h-6 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 12h14M12 5l7 7-7 7"
-              />
-            </svg>
+          <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0">
+            <Image 
+              src={logo} 
+              alt="QuickRide Booking" 
+              className="w-full h-full object-contain"
+            />
           </div>
           <span className="text-xl font-bold text-white tracking-tight">
-            Quick Ride Booking
+            QuickRide Booking
           </span>
         </div>
       </header>
@@ -68,7 +61,7 @@ export default function ResetPasswordPage() {
             <div className="text-center lg:text-left mb-10">
               <h1 className="text-3xl font-bold text-slate-900 mb-3">Reset Password</h1>
               <p className="text-slate-600">
-                Enter the email address associated with your Quick Ride Booking account to receive reset instructions.
+                Enter the email address associated with your QuickRide Booking account to receive reset instructions.
               </p>
             </div>
 
@@ -156,7 +149,7 @@ export default function ResetPasswordPage() {
             <a href="#" className="hover:text-green-400 transition-colors">Security</a>
           </div>
           <p className="text-sm text-slate-400">
-            © 2024 Quick Ride Booking Automotive Group.
+            © 2026 QuickRide Booking Automotive Group.
           </p>
         </div>
       </footer>

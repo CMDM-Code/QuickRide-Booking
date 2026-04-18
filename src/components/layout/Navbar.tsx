@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
+import Image from "next/image";
+import logo from "@/assets/images/quickride_logo.png";
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -34,15 +35,16 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 md:h-20">
           <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0">
-              <img 
-                src="https://assets.kiloapps.io/user_bc07d79b-502e-47d8-aa85-a2d78aa3c851/54e7622e-04e6-46b6-a8bb-b9d5f9a95743/368d7c42-20fd-4323-9ff9-f3b76d6ff19f.png" 
-                alt="Quick Ride Booking" 
-                className="w-full h-full object-cover"
+            <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0">
+              <Image 
+                src={logo} 
+                alt="QuickRide Booking" 
+                className="w-full h-full object-contain"
+                priority
               />
             </div>
-            <span className="text-xl font-bold text-green-900 tracking-tight">
-              Quick Ride Booking
+            <span className="text-xl font-bold text-slate-900 tracking-tight">
+              QuickRide Booking
             </span>
           </Link>
 

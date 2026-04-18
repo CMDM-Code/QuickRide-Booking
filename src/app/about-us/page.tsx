@@ -22,7 +22,7 @@ export default function AboutUsPage() {
               Redefining <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-700 to-green-500">Premium Mobility</span> in the South.
             </h1>
             <p className="text-lg text-slate-600 leading-relaxed font-medium">
-              Established with a vision to elevate the car rental experience, Quick Ride Booking bridges the gap between luxury and accessibility. We don't just rent cars; we curate journeys tailored for professionals, adventurers, and those who demand excellence on the road.
+              Established with a vision to elevate the car rental experience, QuickRide Booking bridges the gap between luxury and accessibility. We don't just rent cars; we curate journeys tailored for professionals, adventurers, and those who demand excellence on the road.
             </p>
             <div className="flex gap-4 pt-4">
               <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">

@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
+import logo from "@/assets/images/quickride_logo.png";
 
 const StaffSidebar = () => {
   const pathname = usePathname();
@@ -60,16 +62,16 @@ const StaffSidebar = () => {
           {/* Brand Header */}
           <div className="p-6 border-b border-slate-100">
             <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg overflow-hidden">
-              <img 
-                src="https://assets.kiloapps.io/user_bc07d79b-502e-47d8-aa85-a2d78aa3c851/54e7622e-04e6-46b6-a8bb-b9d5f9a95743/368d7c42-20fd-4323-9ff9-f3b76d6ff19f.png" 
-                alt="Quick Ride Booking" 
-                className="w-full h-full object-cover"
+            <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0">
+              <Image 
+                src={logo} 
+                alt="QuickRide Booking" 
+                className="w-full h-full object-contain"
               />
             </div>
               <div>
-                <span className="text-lg font-bold text-green-900 tracking-tight">
-                  Quick Ride Booking
+                <span className="text-lg font-bold text-slate-900 tracking-tight">
+                  QuickRide Booking
                 </span>
                 <p className="text-xs text-slate-500">Staff Portal</p>
               </div>

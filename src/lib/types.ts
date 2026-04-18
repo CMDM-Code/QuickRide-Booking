@@ -1,4 +1,4 @@
-// Type definitions for Elite Quick Ride Booking
+// Type definitions for QuickRide Booking
 export interface Profile {
   id: string;
   full_name: string;

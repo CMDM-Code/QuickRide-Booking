@@ -1268,7 +1268,7 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
                    Booking Requests Sent!
                  </h2>
                  <p className="text-slate-600 font-medium max-w-sm mx-auto leading-relaxed">
-                   Thank you for choosing Quick Ride Booking. Our team will review your {bookingRequests.length} vehicle request(s) and contact you shortly.
+                   Thank you for choosing QuickRide Booking. Our team will review your {bookingRequests.length} vehicle request(s) and contact you shortly.
                  </p>
                </div>
                <button

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import Image from "next/image";
+import logo from "@/assets/images/quickride_logo.png";
 
 const Footer = () => {
   return (
@@ -7,15 +9,15 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="md:col-span-2">
             <div className="flex items-center space-x-3 mb-6">
-              <div className="w-10 h-10 rounded-xl overflow-hidden">
-                <img 
-                  src="https://assets.kiloapps.io/user_bc07d79b-502e-47d8-aa85-a2d78aa3c851/54e7622e-04e6-46b6-a8bb-b9d5f9a95743/368d7c42-20fd-4323-9ff9-f3b76d6ff19f.png" 
-                  alt="Quick Ride Booking" 
-                  className="w-full h-full object-cover"
+              <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0">
+                <Image 
+                  src={logo} 
+                  alt="QuickRide Booking" 
+                  className="w-full h-full object-contain"
                 />
               </div>
               <span className="text-2xl font-bold tracking-tight">
-                Quick Ride Booking
+                QuickRide Booking
               </span>
             </div>
             <p className="text-slate-400 max-w-md leading-relaxed mb-6">
@@ -152,7 +154,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-slate-800 mt-12 pt-8 text-center text-slate-400">
-          <p>&copy; {new Date().getFullYear()} Quick Ride Booking Automotive Group.</p>
+          <p>&copy; {new Date().getFullYear()} QuickRide Booking Automotive Group.</p>
         </div>
       </div>
     </footer>

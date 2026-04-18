@@ -126,7 +126,7 @@ export default function Home() {
               </h1>
               
               <p className="text-lg text-slate-300 max-w-xl leading-relaxed">
-                Quick Ride Booking provides premium car rental service in Region 11 and beyond. Experience transparent pricing, 
+                QuickRide Booking provides premium car rental service in Region 11 and beyond. Experience transparent pricing, 
                 professional drivers, and a seamless multi-stage booking process.
               </p>
 
@@ -327,7 +327,7 @@ export default function Home() {
               Trust & Reliability
             </span>
             <h2 className="text-3xl md:text-6xl font-black text-white mt-2 mb-4">
-              Why Choose Quick Ride?
+              Why Choose QuickRide?
             </h2>
           </div>
 
