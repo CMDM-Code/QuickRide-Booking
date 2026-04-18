@@ -1,23 +1,15 @@
 'use client';
 
+import { getPortalSession, clearPortalSession } from "./portal-auth";
+
 export const staffAuth = {
   isAuthenticated: (): boolean => {
-    if (typeof window === 'undefined') return false;
-    
-    try {
-      const session = localStorage.getItem('quickride_staff_session');
-      if (!session) return false;
-      
-      const data = JSON.parse(session);
-      return data.authenticated === true;
-    } catch {
-      return false;
-    }
+    const session = getPortalSession();
+    if (!session) return false;
+    return session.authenticated === true && (session.role === 'staff' || session.role === 'admin');
   },
 
   logout: (): void => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('quickride_staff_session');
-    }
+    clearPortalSession();
   }
 };

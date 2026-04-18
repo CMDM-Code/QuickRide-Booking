@@ -1,7 +1,7 @@
 'use client';
 
 import StaffLayout from "../layout";
-import Link from "next/link";
+import { clearPortalSession } from "@/lib/portal-auth";
 
 export default function StaffDashboardPage() {
   return (
@@ -15,7 +15,7 @@ export default function StaffDashboardPage() {
           </div>
           <button
             onClick={() => {
-              localStorage.removeItem('quickride_staff_session');
+              clearPortalSession();
               window.location.href = '/staff-login';
             }}
             className="p-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
@@ -119,4 +119,3 @@ export default function StaffDashboardPage() {
     </StaffLayout>
   );
 }
-

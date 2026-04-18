@@ -1,32 +1,54 @@
 'use client';
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { authClient } from "@/lib/auth-client";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { setPortalSession } from "@/lib/portal-auth";
 import logo from "@/assets/images/quickride_logo.png";
-
-const ADMIN_EMAIL = "admin@quickridebooking.com";
-const ADMIN_PASSWORD_HASH = "$2b$08$n53gG7hH9jK0lL1mN2oP3qR4sT5uV6wX7yZ8aB9cD0eF1gH2iJ3kL4mN5oP6qR7sT9";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
+    try {
+      const loginResult = await authClient.login(email.trim(), password);
+      if (!loginResult.success || !loginResult.user) {
+        setError(loginResult.error || "Invalid credentials.");
+        return;
+      }
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+      if (!db) {
+        setError("Authentication service unavailable. Please try again.");
+        return;
+      }
 
-    if ((email === ADMIN_EMAIL || email === "admin@forrestcarrental.com") && password === "admin@123") {
-      localStorage.setItem('quickride_admin_session', JSON.stringify({ authenticated: true, loginTime: new Date().toISOString() }));
-      window.location.href = "/admin/dashboard";
-    } else {
-      setError("Invalid administrator credentials");
+      const profileSnap = await getDoc(doc(db, 'profiles', loginResult.user.id));
+      const role = (profileSnap.exists() ? profileSnap.data()?.role : null) as string | null;
+
+      if (role === 'admin') {
+        setPortalSession({ role: 'admin', userId: loginResult.user.id, email: loginResult.user.email });
+        window.location.href = "/admin/dashboard";
+        return;
+      }
+
+      if (role === 'staff') {
+        setPortalSession({ role: 'staff', userId: loginResult.user.id, email: loginResult.user.email });
+        window.location.href = "/staff/dashboard";
+        return;
+      }
+
+      setError("This account has no staff/admin permission. Contact an administrator.");
+    } catch (err: any) {
+      setError(err?.message || "Failed to authenticate.");
+    } finally {
       setIsLoading(false);
     }
   };
