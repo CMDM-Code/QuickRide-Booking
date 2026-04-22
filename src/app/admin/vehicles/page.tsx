@@ -1,26 +1,47 @@
 'use client';
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { db } from "@/lib/firebase";
 import { 
   collection, 
   getDocs, 
+  query,
+  where,
   addDoc, 
   updateDoc, 
   deleteDoc, 
   doc, 
-  serverTimestamp 
+  serverTimestamp,
+  Timestamp
 } from "firebase/firestore";
-import { Vehicle, CarType } from "@/lib/types";
+import { Vehicle, CarType, PricingSheet } from "@/lib/types";
+import { titleFromId } from "@/lib/pricing";
 import { adminStore } from "@/lib/admin-store";
 import { withTimeout } from "@/lib/api-utils";
+
+function toDate(v: any): Date | null {
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  if (v instanceof Timestamp) return v.toDate();
+  if (typeof v?.seconds === 'number') return new Date(v.seconds * 1000);
+  const d = new Date(v);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
 
 export default function VehicleManagementPage() {
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [carTypes, setCarTypes] = useState<CarType[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<'cloud' | 'local'>('cloud');
+
+  // Filters
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterAvailable, setFilterAvailable] = useState<'all' | 'available' | 'unavailable'>('all');
+  const [availFrom, setAvailFrom] = useState('');
+  const [availTo, setAvailTo] = useState('');
   const [newVehicle, setNewVehicle] = useState({
     name: '',
     car_type_id: '',
@@ -42,15 +63,28 @@ export default function VehicleManagementPage() {
     
     if (db) {
       try {
-        const [vehsSnap, carTypesSnap] = await withTimeout(
+        const [vehsSnap, carTypesSnap, sheetsSnap, bookingsSnap] = await withTimeout(
           Promise.all([
             getDocs(collection(db, 'vehicles')),
-            getDocs(collection(db, 'car_types'))
+            getDocs(collection(db, 'car_types')),
+            getDocs(collection(db, 'pricing_sheets')),
+            getDocs(query(collection(db, 'bookings'), where('status', 'in', ['approved', 'active'])))
           ]), 
           5000
         );
         
         const carTypesData = carTypesSnap.docs.map(d => ({ id: d.id, ...d.data() } as CarType));
+        const pricingSheets = sheetsSnap.docs.map(d => ({ id: d.id, ...d.data() } as PricingSheet));
+
+        // Prefer pricing sheet IDs as the canonical car type list (keeps vehicles priceable)
+        const sheetTypeRows: CarType[] = pricingSheets.map(s => ({
+          id: s.id,
+          name: titleFromId(s.id),
+          driver_only: false
+        }));
+
+        const mergedCarTypes = sheetTypeRows.length > 0 ? sheetTypeRows : carTypesData;
+
         if (carTypesData.length === 0) {
            carTypesData.push(
               { id: 'economy', name: 'Economy', driver_only: false },
@@ -59,7 +93,7 @@ export default function VehicleManagementPage() {
               { id: 'van', name: 'Van', driver_only: false }
            );
         }
-        const carTypesMap = Object.fromEntries(carTypesData.map(t => [t.id, t]));
+        const carTypesMap = Object.fromEntries(mergedCarTypes.map(t => [t.id, t]));
 
         let vehiclesData = vehsSnap.docs.map(d => ({
             id: d.id,
@@ -74,11 +108,12 @@ export default function VehicleManagementPage() {
         });
 
         setVehicles(vehiclesData);
-        setCarTypes(carTypesData);
+        setCarTypes(mergedCarTypes);
+        setBookings(bookingsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
         setMode('cloud');
         
-        if (carTypesData.length > 0 && !newVehicle.car_type_id) {
-          setNewVehicle(prev => ({ ...prev, car_type_id: carTypesData[0].id }));
+        if (mergedCarTypes.length > 0 && !newVehicle.car_type_id) {
+          setNewVehicle(prev => ({ ...prev, car_type_id: mergedCarTypes[0].id }));
         }
         setLoading(false);
         return;
@@ -109,8 +144,63 @@ export default function VehicleManagementPage() {
       { id: 'van', name: 'Van', driver_only: false }
     ]);
     setMode('local');
+    setBookings([]);
     setLoading(false);
   }
+
+  const vehiclesFiltered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const tf = filterType;
+    const from = availFrom ? new Date(`${availFrom}T00:00:00`) : null;
+    const to = availTo ? new Date(`${availTo}T23:59:59`) : null;
+
+    const bookingByVehicle: Record<string, { start: Date; end: Date }[]> = {};
+    if (from && to && bookings.length > 0) {
+      for (const b of bookings) {
+        const carId = String(b.car_id ?? '');
+        if (!carId) continue;
+        const s = toDate(b.start_date);
+        const e = toDate(b.end_date);
+        if (!s || !e) continue;
+        (bookingByVehicle[carId] ||= []).push({ start: s, end: e });
+      }
+    }
+
+    const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) => aStart < bEnd && aEnd > bStart;
+
+    return vehicles.filter((v) => {
+      if (filterAvailable !== 'all') {
+        const want = filterAvailable === 'available';
+        if (Boolean(v.available) !== want) return false;
+      }
+
+      if (tf !== 'all' && String(v.car_type_id) !== tf) return false;
+
+      if (q) {
+        const name = String(v.name ?? '').toLowerCase();
+        const type = String(v.car_type?.name ?? '').toLowerCase();
+        const typeId = String(v.car_type_id ?? '').toLowerCase();
+        if (![name, type, typeId].some((x) => x.includes(q))) return false;
+      }
+
+      // Availability in date range (based on bookings overlap)
+      if (from && to) {
+        const hasConflict = (bookingByVehicle[String(v.id)] || []).some((r) => overlaps(from, to, r.start, r.end));
+        // If there is a conflict, vehicle isn't available for that window
+        if (hasConflict) return false;
+      }
+
+      return true;
+    });
+  }, [vehicles, bookings, search, filterType, filterAvailable, availFrom, availTo]);
+
+  const uniqueTypeIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const v of vehicles) {
+      if (v?.car_type_id) set.add(String(v.car_type_id));
+    }
+    return Array.from(set).sort();
+  }, [vehicles]);
 
   const handleCreateVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -225,6 +315,12 @@ export default function VehicleManagementPage() {
              >
                 🔄
              </button>
+             <input
+               value={search}
+               onChange={(e) => setSearch(e.target.value)}
+               placeholder="Search vehicle, type..."
+               className="px-4 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm text-slate-700 outline-none w-[260px]"
+             />
              <button 
               onClick={() => {
                   setEditingVehicleId(null);
@@ -243,6 +339,60 @@ export default function VehicleManagementPage() {
              >
                {showCreateForm ? 'Cancel' : 'Add New Vehicle'}
              </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Car type</p>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-sm bg-white"
+            >
+              <option value="all">All</option>
+              {uniqueTypeIds.map((id) => (
+                <option key={id} value={id}>{id}</option>
+              ))}
+            </select>
+          </div>
+          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Availability flag</p>
+            <select
+              value={filterAvailable}
+              onChange={(e) => setFilterAvailable(e.target.value as any)}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-sm bg-white"
+            >
+              <option value="all">All</option>
+              <option value="available">Available</option>
+              <option value="unavailable">Unavailable</option>
+            </select>
+          </div>
+          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm lg:col-span-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Available between (no booking overlap)</p>
+            <div className="flex gap-2">
+              <input type="date" value={availFrom} onChange={(e) => setAvailFrom(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold text-xs" />
+              <input type="date" value={availTo} onChange={(e) => setAvailTo(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold text-xs" />
+            </div>
+            <p className="text-[10px] text-slate-500 mt-2 font-semibold">Uses bookings with status: approved/active.</p>
+          </div>
+          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Results</p>
+              <p className="text-2xl font-black text-slate-900">{vehiclesFiltered.length}</p>
+            </div>
+            <button
+              onClick={() => {
+                setSearch('');
+                setFilterType('all');
+                setFilterAvailable('all');
+                setAvailFrom('');
+                setAvailTo('');
+              }}
+              className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200"
+            >
+              Reset
+            </button>
           </div>
         </div>
 
@@ -349,7 +499,7 @@ export default function VehicleManagementPage() {
                 </tr>
               </thead>
               <tbody>
-                {vehicles.map((vehicle) => (
+                {vehiclesFiltered.map((vehicle) => (
                   <tr key={vehicle.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                     <td className="p-6">
                       <div className="flex items-center gap-4">
@@ -368,6 +518,7 @@ export default function VehicleManagementPage() {
                     </td>
                     <td className="p-6 font-medium text-slate-700">
                        {vehicle.car_type?.name || 'Standard'}
+                       <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{vehicle.car_type_id}</div>
                     </td>
                     <td className="p-6">
                       <div className="flex gap-4 text-xs font-bold text-slate-600">
@@ -418,6 +569,13 @@ export default function VehicleManagementPage() {
                     </td>
                   </tr>
                 ))}
+                {vehiclesFiltered.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-12 text-center text-slate-500 font-semibold">
+                      No vehicles match the current filters.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

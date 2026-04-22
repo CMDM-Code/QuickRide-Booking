@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -8,10 +8,27 @@ import {
   orderBy, 
   updateDoc, 
   doc, 
-  where 
+  Timestamp
 } from "firebase/firestore";
 import { adminStore } from "@/lib/admin-store";
 import { withTimeout } from "@/lib/api-utils";
+
+type BookingSort =
+  | 'created_desc'
+  | 'created_asc'
+  | 'upcoming_start_asc'
+  | 'active_recent_desc'
+  | 'cancelled_recent_desc'
+  | 'due_soon_asc';
+
+function toDate(v: any): Date | null {
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  if (v instanceof Timestamp) return v.toDate();
+  if (typeof v?.seconds === 'number') return new Date(v.seconds * 1000);
+  const d = new Date(v);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
 
 export default function BookingManagementPage() {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -19,6 +36,13 @@ export default function BookingManagementPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [mode, setMode] = useState<'cloud' | 'local'>('cloud');
+  const [search, setSearch] = useState('');
+  const [bookingFrom, setBookingFrom] = useState(''); // start_date >=
+  const [bookingTo, setBookingTo] = useState('');     // start_date <=
+  const [acctFrom, setAcctFrom] = useState('');       // profile.created_at >=
+  const [acctTo, setAcctTo] = useState('');           // profile.created_at <=
+  const [carQuery, setCarQuery] = useState('');       // type/model/id
+  const [sort, setSort] = useState<BookingSort>('created_desc');
 
   useEffect(() => {
     fetchBookings();
@@ -41,7 +65,7 @@ export default function BookingManagementPage() {
         );
 
         const profilesMap = Object.fromEntries(profilesSnap.docs.map((d: any) => [d.id, d.data()]));
-        const vehiclesMap = Object.fromEntries(vehiclesSnap.docs.map((d: any) => [d.id, d.data()]));
+        const vehiclesMap = Object.fromEntries(vehiclesSnap.docs.map((d: any) => [d.id, { id: d.id, ...d.data() }]));
         vehiclesMap['veh_mazdavan'] = { name: 'Mazda DA17 2024' };
         vehiclesMap['veh_mirage_gls'] = { name: 'Mitsubishi Mirage GLS' };
         vehiclesMap['veh_vios_xle'] = { name: 'Toyota Vios XLE' };
@@ -56,7 +80,11 @@ export default function BookingManagementPage() {
                 ...b,
                 profile: profilesMap[b.user_id] || { full_name: 'Unknown User' },
                 vehicle: vehiclesMap[b.car_id] || { name: 'Unknown Vehicle' },
-                pickup_location: locationsMap[b.pickup_location_id] || { name: 'Unknown Location' }
+                pickup_location: locationsMap[b.pickup_location_id] || { name: 'Unknown Location' },
+                _createdAt: toDate(b.created_at),
+                _startAt: toDate(b.start_date),
+                _endAt: toDate(b.end_date),
+                _acctCreatedAt: toDate(profilesMap[b.user_id]?.created_at),
             };
         });
         
@@ -114,9 +142,85 @@ export default function BookingManagementPage() {
     }
   };
 
-  const filteredBookings = filterStatus === 'all' 
-    ? bookings 
-    : bookings.filter(b => b.status === filterStatus);
+  const filteredBookings = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const cq = carQuery.trim().toLowerCase();
+    const fromBooking = bookingFrom ? new Date(`${bookingFrom}T00:00:00`) : null;
+    const toBooking = bookingTo ? new Date(`${bookingTo}T23:59:59`) : null;
+    const fromAcct = acctFrom ? new Date(`${acctFrom}T00:00:00`) : null;
+    const toAcct = acctTo ? new Date(`${acctTo}T23:59:59`) : null;
+
+    const afterFilter = bookings.filter((b) => {
+      if (filterStatus !== 'all' && b.status !== filterStatus) return false;
+
+      if (fromBooking && (!b._startAt || b._startAt < fromBooking)) return false;
+      if (toBooking && (!b._startAt || b._startAt > toBooking)) return false;
+
+      if (fromAcct && (!b._acctCreatedAt || b._acctCreatedAt < fromAcct)) return false;
+      if (toAcct && (!b._acctCreatedAt || b._acctCreatedAt > toAcct)) return false;
+
+      if (cq) {
+        const vehicleName = String(b.vehicle?.name ?? '').toLowerCase();
+        const carTypeId = String(b.vehicle?.car_type_id ?? '').toLowerCase();
+        const carId = String(b.car_id ?? '').toLowerCase();
+        if (![vehicleName, carTypeId, carId].some((x) => x.includes(cq))) return false;
+      }
+
+      if (q) {
+        const customer = String(b.profile?.full_name ?? '').toLowerCase();
+        const bookingId = String(b.id ?? '').toLowerCase();
+        const vehicleName = String(b.vehicle?.name ?? '').toLowerCase();
+        const status = String(b.status ?? '').toLowerCase();
+        if (![customer, bookingId, vehicleName, status].some((x) => x.includes(q))) return false;
+      }
+
+      return true;
+    });
+
+    const now = new Date();
+
+    const sorted = [...afterFilter].sort((a, b) => {
+      const aCreated = a._createdAt?.getTime() ?? 0;
+      const bCreated = b._createdAt?.getTime() ?? 0;
+      const aStart = a._startAt?.getTime() ?? 0;
+      const bStart = b._startAt?.getTime() ?? 0;
+      const aEnd = a._endAt?.getTime() ?? 0;
+      const bEnd = b._endAt?.getTime() ?? 0;
+
+      switch (sort) {
+        case 'created_desc':
+          return bCreated - aCreated;
+        case 'created_asc':
+          return aCreated - bCreated;
+        case 'upcoming_start_asc': {
+          const aUpcoming = (a._startAt && a._startAt >= now) ? aStart : Number.POSITIVE_INFINITY;
+          const bUpcoming = (b._startAt && b._startAt >= now) ? bStart : Number.POSITIVE_INFINITY;
+          if (aUpcoming !== bUpcoming) return aUpcoming - bUpcoming;
+          return bCreated - aCreated;
+        }
+        case 'active_recent_desc': {
+          const aActive = a.status === 'active' ? aCreated : -1;
+          const bActive = b.status === 'active' ? bCreated : -1;
+          return bActive - aActive;
+        }
+        case 'cancelled_recent_desc': {
+          const aCan = a.status === 'cancelled' ? aCreated : -1;
+          const bCan = b.status === 'cancelled' ? bCreated : -1;
+          return bCan - aCan;
+        }
+        case 'due_soon_asc': {
+          const aDue = (a.status === 'active' && a._endAt) ? aEnd : Number.POSITIVE_INFINITY;
+          const bDue = (b.status === 'active' && b._endAt) ? bEnd : Number.POSITIVE_INFINITY;
+          if (aDue !== bDue) return aDue - bDue;
+          return bCreated - aCreated;
+        }
+        default:
+          return bCreated - aCreated;
+      }
+    });
+
+    return sorted;
+  }, [bookings, filterStatus, search, bookingFrom, bookingTo, acctFrom, acctTo, carQuery, sort]);
 
   if (loading) {
     return (
@@ -142,6 +246,12 @@ export default function BookingManagementPage() {
           </div>
           <div className="flex gap-2">
             <button onClick={fetchBookings} className="p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50">🔄</button>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search customer, booking id, vehicle..."
+              className="px-4 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm text-slate-700 outline-none w-[260px]"
+            />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -154,6 +264,66 @@ export default function BookingManagementPage() {
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as BookingSort)}
+              className="px-6 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm text-slate-600 focus:ring-2 focus:ring-green-500/20 outline-none"
+              title="Sort after filters"
+            >
+              <option value="created_desc">Most recent booking</option>
+              <option value="upcoming_start_asc">Nearest upcoming booking date</option>
+              <option value="active_recent_desc">Most recent active booking</option>
+              <option value="cancelled_recent_desc">Most recent cancellation</option>
+              <option value="created_asc">Earliest booking (first-come)</option>
+              <option value="due_soon_asc">Due date (ending soonest)</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Booking start date</p>
+            <div className="flex gap-2">
+              <input type="date" value={bookingFrom} onChange={(e) => setBookingFrom(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold text-xs" />
+              <input type="date" value={bookingTo} onChange={(e) => setBookingTo(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold text-xs" />
+            </div>
+          </div>
+          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Account created date</p>
+            <div className="flex gap-2">
+              <input type="date" value={acctFrom} onChange={(e) => setAcctFrom(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold text-xs" />
+              <input type="date" value={acctTo} onChange={(e) => setAcctTo(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold text-xs" />
+            </div>
+          </div>
+          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm lg:col-span-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Car filter (type/model/id)</p>
+            <input
+              value={carQuery}
+              onChange={(e) => setCarQuery(e.target.value)}
+              placeholder="e.g. mini_van, mazda, veh_..."
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-sm"
+            />
+          </div>
+          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Results</p>
+              <p className="text-2xl font-black text-slate-900">{filteredBookings.length}</p>
+            </div>
+            <button
+              onClick={() => {
+                setSearch('');
+                setCarQuery('');
+                setBookingFrom('');
+                setBookingTo('');
+                setAcctFrom('');
+                setAcctTo('');
+                setFilterStatus('all');
+                setSort('created_desc');
+              }}
+              className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200"
+            >
+              Reset
+            </button>
           </div>
         </div>
 
@@ -212,10 +382,15 @@ export default function BookingManagementPage() {
                     </td>
                     <td className="p-6 font-bold text-slate-900">
                       {booking.vehicle?.name}
+                      {booking.vehicle?.car_type_id && (
+                        <div className="mt-1">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{booking.vehicle.car_type_id}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="p-6 text-xs">
                       <p className="font-bold text-slate-800">
-                        {new Date(booking.start_date?.seconds ? booking.start_date.seconds * 1000 : booking.start_date).toLocaleDateString()} - {new Date(booking.end_date?.seconds ? booking.end_date.seconds * 1000 : booking.end_date).toLocaleDateString()}
+                        {booking._startAt ? booking._startAt.toLocaleDateString() : 'N/A'} - {booking._endAt ? booking._endAt.toLocaleDateString() : 'N/A'}
                       </p>
                       <p className="text-slate-500">{booking.pickup_location?.name}</p>
                     </td>
@@ -248,6 +423,13 @@ export default function BookingManagementPage() {
                     </td>
                   </tr>
                 ))}
+                {filteredBookings.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="p-12 text-center text-slate-500 font-semibold">
+                      No bookings match the current filters.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

@@ -4,19 +4,22 @@ import { db } from "@/lib/firebase";
 import { 
   collection, 
   getDocs, 
-  setDoc, 
   doc, 
   writeBatch,
   serverTimestamp 
 } from "firebase/firestore";
-import { CarType, Location, PricingRate } from "@/lib/types";
+import { Location, PricingSheet } from "@/lib/types";
+import { titleFromId } from "@/lib/pricing";
 import { adminStore } from "@/lib/admin-store";
 import { withTimeout } from "@/lib/api-utils";
 
+type CarTypeRow = { id: string; name: string };
+type RateCell = { "12h": number | null; "24h": number | null };
+
 export default function PricingManagementPage() {
-  const [carTypes, setCarTypes] = useState<CarType[]>([]);
+  const [carTypes, setCarTypes] = useState<CarTypeRow[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [pricingMatrix, setPricingMatrix] = useState<Record<string, Record<string, Partial<PricingRate>>>>({});
+  const [pricingMatrix, setPricingMatrix] = useState<Record<string, Record<string, RateCell>>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState<'cloud' | 'local'>('cloud');
@@ -30,30 +33,36 @@ export default function PricingManagementPage() {
     
     if (db) {
       try {
-        const [typesSnap, locsSnap, ratesSnap] = await withTimeout(
+        const [locsSnap, sheetsSnap] = await withTimeout(
           Promise.all([
-            getDocs(collection(db, 'car_types')),
             getDocs(collection(db, 'locations')),
-            getDocs(collection(db, 'pricing_rates'))
+            getDocs(collection(db, 'pricing_sheets'))
           ]), 
           5000
         );
         
-        const types = typesSnap.docs.map(d => ({ id: d.id, ...d.data() } as CarType));
         const locs = locsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Location));
-        const rates = ratesSnap.docs.map(d => ({ id: d.id, ...d.data() } as PricingRate));
+        const sheets = sheetsSnap.docs.map(d => ({ id: d.id, ...d.data() } as PricingSheet));
+
+        const types: CarTypeRow[] = sheets
+          .map(s => ({ id: s.id, name: titleFromId(s.id) }))
+          .sort((a, b) => a.name.localeCompare(b.name));
 
         setCarTypes(types);
         setLocations(locs);
 
-        const matrix: Record<string, Record<string, Partial<PricingRate>>> = {};
-        types.forEach(t => {
+        const matrix: Record<string, Record<string, RateCell>> = {};
+        for (const t of types) {
+          const sheet = sheets.find(s => s.id === t.id);
           matrix[t.id] = {};
-          locs.forEach(l => {
-            const rate = rates.find(r => r.car_type_id === t.id && r.location_id === l.id);
-            matrix[t.id][l.id] = rate || { car_type_id: t.id, location_id: l.id };
-          });
-        });
+          for (const l of locs) {
+            const cell = sheet?.rates?.[l.id];
+            matrix[t.id][l.id] = {
+              "12h": typeof cell?.["12h"] === "number" || cell?.["12h"] === null ? (cell["12h"] ?? null) : null,
+              "24h": typeof cell?.["24h"] === "number" || cell?.["24h"] === null ? (cell["24h"] ?? null) : null
+            };
+          }
+        }
         setPricingMatrix(matrix);
         setMode('cloud');
         setLoading(false);
@@ -66,22 +75,22 @@ export default function PricingManagementPage() {
     // Fallback to Local Rules
     const localRules = adminStore.getPricingRules();
     const mockLocs: Location[] = [{ id: 'gensan', name: 'General Santos' }, { id: 'davao', name: 'Davao City' }];
-    const mockTypes: CarType[] = [
-      { id: 'economy', name: 'Economy', driver_only: false }, 
-      { id: 'suv', name: 'SUV', driver_only: false }
+    const mockTypes: CarTypeRow[] = [
+      { id: 'economy', name: 'Economy' }, 
+      { id: 'suv', name: 'SUV' }
     ];
 
     setCarTypes(mockTypes);
     setLocations(mockLocs);
 
-    const matrix: Record<string, Record<string, Partial<PricingRate>>> = {};
+    const matrix: Record<string, Record<string, RateCell>> = {};
     mockTypes.forEach(t => {
       matrix[t.id] = {};
       mockLocs.forEach(l => {
         const rule = localRules.find(r => r.category === t.id);
-        matrix[t.id][l.id] = { 
-          rate_12hr: rule?.valueType === 'fixed' ? rule.value * 0.6 : 1500, 
-          rate_24hr: rule?.valueType === 'fixed' ? rule.value : 2500 
+        matrix[t.id][l.id] = {
+          "12h": rule?.valueType === 'fixed' ? rule.value * 0.6 : 1500,
+          "24h": rule?.valueType === 'fixed' ? rule.value : 2500
         };
       });
     });
@@ -90,7 +99,7 @@ export default function PricingManagementPage() {
     setLoading(false);
   }
 
-  const handleRateChange = (carTypeId: string, locationId: string, field: 'rate_12hr' | 'rate_24hr', value: string) => {
+  const handleRateChange = (carTypeId: string, locationId: string, field: '12h' | '24h', value: string) => {
     const numValue = value === '' ? null : parseFloat(value);
     setPricingMatrix(prev => ({
       ...prev,
@@ -111,23 +120,20 @@ export default function PricingManagementPage() {
         const batch = writeBatch(db);
         
         for (const carTypeId in pricingMatrix) {
-          for (const locationId in pricingMatrix[carTypeId]) {
-            const rate = pricingMatrix[carTypeId][locationId];
-            const id = `${carTypeId}_${locationId}`;
-            const rateRef = doc(db, 'pricing_rates', id);
-            
-            batch.set(rateRef, {
-              car_type_id: carTypeId,
-              location_id: locationId,
-              rate_12hr: rate.rate_12hr,
-              rate_24hr: rate.rate_24hr,
+          const rates: Record<string, RateCell> = pricingMatrix[carTypeId];
+          const sheetRef = doc(db, 'pricing_sheets', carTypeId);
+          batch.set(
+            sheetRef,
+            {
+              rates,
               updated_at: serverTimestamp()
-            }, { merge: true });
-          }
+            },
+            { merge: true }
+          );
         }
         
         await batch.commit();
-        alert("Cloud Spreadsheet Update Successful!");
+        alert("Pricing sheets updated successfully!");
       } catch (err) {
         console.error("Error saving rates:", err);
         alert("Failed to save to cloud.");
@@ -213,8 +219,8 @@ export default function PricingManagementPage() {
                                <span className="text-[10px] font-black text-slate-400 w-8">12H</span>
                                <input
                                   type="number"
-                                  value={rate.rate_12hr || ''}
-                                  onChange={(e) => handleRateChange(type.id, loc.id, 'rate_12hr', e.target.value)}
+                                  value={rate["12h"] ?? ''}
+                                  onChange={(e) => handleRateChange(type.id, loc.id, '12h', e.target.value)}
                                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-green-500 outline-none"
                                 />
                             </div>
@@ -222,8 +228,8 @@ export default function PricingManagementPage() {
                                <span className="text-[10px] font-black text-slate-400 w-8">24H</span>
                                <input
                                   type="number"
-                                  value={rate.rate_24hr || ''}
-                                  onChange={(e) => handleRateChange(type.id, loc.id, 'rate_24hr', e.target.value)}
+                                  value={rate["24h"] ?? ''}
+                                  onChange={(e) => handleRateChange(type.id, loc.id, '24h', e.target.value)}
                                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:border-green-500 outline-none"
                                 />
                             </div>

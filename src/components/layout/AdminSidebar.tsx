@@ -15,12 +15,15 @@ const AdminSidebar = () => {
     { name: "Dashboard", href: "/admin/dashboard", icon: "📊" },
     { name: "User Management", href: "/admin/users", icon: "👤" },
     { name: "Vehicle Management", href: "/admin/vehicles", icon: "🚗" },
+    { name: "Location Management", href: "/admin/locations", icon: "🧭" },
     { name: "Pricing Management", href: "/admin/pricing", icon: "💰" },
+    { name: "Pricing Schedules", href: "/admin/pricing/schedules", icon: "🗓️" },
     { name: "Booking Management", href: "/admin/bookings", icon: "📋" },
     { name: "Reports", href: "/admin/reports", icon: "📈" },
     { name: "Media Library", href: "/admin/media", icon: "🖼️" },
     { name: "Notifications", href: "/admin/notifications", icon: "🔔" },
     { name: "System Settings", href: "/admin/settings", icon: "⚙️" },
+    { name: "Booking Form Settings", href: "/admin/settings/booking-form", icon: "🧩" },
     { name: "Security Logs", href: "/admin/security", icon: "🔒" },
   ];
 

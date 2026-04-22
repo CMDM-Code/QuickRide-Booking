@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -16,14 +16,29 @@ import { adminStore, AdminUser } from "@/lib/admin-store";
 import { withTimeout } from "@/lib/api-utils";
 
 type FilterRole = 'all' | 'customer' | 'staff' | 'admin';
+type UserSort = 'joined_desc' | 'joined_asc' | 'bookings_desc' | 'bookings_asc' | 'last_activity_desc' | 'inactive_first';
+
+function toDate(v: any): Date | null {
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  if (v instanceof Timestamp) return v.toDate();
+  if (typeof v?.seconds === 'number') return new Date(v.seconds * 1000);
+  const d = new Date(v);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
 
 export default function UnifiedUserManagementPage() {
   const [users, setUsers] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<'cloud' | 'local'>('cloud');
   const [activeTab, setActiveTab] = useState<FilterRole>('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newStaff, setNewStaff] = useState({ full_name: '', email: '' });
+  const [search, setSearch] = useState('');
+  const [minBookings, setMinBookings] = useState<string>('');
+  const [maxBookings, setMaxBookings] = useState<string>('');
+  const [sort, setSort] = useState<UserSort>('joined_desc');
 
   useEffect(() => {
     fetchUsers();
@@ -33,15 +48,21 @@ export default function UnifiedUserManagementPage() {
     setLoading(true);
     if (db) {
       try {
-        const q = query(collection(db, 'profiles'), orderBy('created_at', 'desc'));
-        const snap = await withTimeout(getDocs(q), 3000);
+        const [profilesSnap, bookingsSnap] = await withTimeout(
+          Promise.all([
+            getDocs(query(collection(db, 'profiles'), orderBy('created_at', 'desc'))),
+            getDocs(collection(db, 'bookings'))
+          ]),
+          5000
+        );
 
-        const data = snap.docs.map((d: any) => ({
+        const data = profilesSnap.docs.map((d: any) => ({
             id: d.id,
             ...d.data()
         }));
 
         setUsers(data);
+        setBookings(bookingsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
         setMode('cloud');
         setLoading(false);
         return;
@@ -62,6 +83,7 @@ export default function UnifiedUserManagementPage() {
       _source: 'local'
     })));
     setMode('local');
+    setBookings([]);
     setLoading(false);
   }
 
@@ -116,10 +138,80 @@ export default function UnifiedUserManagementPage() {
     fetchUsers();
   };
 
-  const filteredUsers = users.filter(user => {
-    if (activeTab === 'all') return true;
-    return user.role === activeTab;
-  });
+  const userStats = useMemo(() => {
+    const counts: Record<string, number> = {};
+    const last: Record<string, Date> = {};
+
+    for (const b of bookings) {
+      const uid = String(b.user_id ?? '');
+      if (!uid) continue;
+      counts[uid] = (counts[uid] ?? 0) + 1;
+
+      const t = toDate(b.created_at) ?? toDate(b.start_date) ?? toDate(b.end_date);
+      if (!t) continue;
+      if (!last[uid] || t > last[uid]) last[uid] = t;
+    }
+
+    return { counts, last };
+  }, [bookings]);
+
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const min = minBookings !== '' ? Number(minBookings) : null;
+    const max = maxBookings !== '' ? Number(maxBookings) : null;
+    const now = new Date();
+
+    const base = users.filter((user) => {
+      if (activeTab !== 'all' && user.role !== activeTab) return false;
+
+      const bookingCount = userStats.counts[user.id] ?? 0;
+      if (min !== null && bookingCount < min) return false;
+      if (max !== null && bookingCount > max) return false;
+
+      if (q) {
+        const name = String(user.full_name || user.name || '').toLowerCase();
+        const email = String(user.email || '').toLowerCase();
+        const id = String(user.id || '').toLowerCase();
+        if (![name, email, id].some((x) => x.includes(q))) return false;
+      }
+
+      return true;
+    });
+
+    const sorted = [...base].sort((a, b) => {
+      const aJoined = (toDate(a.created_at)?.getTime() ?? 0);
+      const bJoined = (toDate(b.created_at)?.getTime() ?? 0);
+      const aCount = userStats.counts[a.id] ?? 0;
+      const bCount = userStats.counts[b.id] ?? 0;
+      const aLast = userStats.last[a.id]?.getTime() ?? 0;
+      const bLast = userStats.last[b.id]?.getTime() ?? 0;
+
+      switch (sort) {
+        case 'joined_desc':
+          return bJoined - aJoined;
+        case 'joined_asc':
+          return aJoined - bJoined;
+        case 'bookings_desc':
+          return bCount - aCount;
+        case 'bookings_asc':
+          return aCount - bCount;
+        case 'last_activity_desc':
+          return bLast - aLast;
+        case 'inactive_first': {
+          // 30+ days since last activity goes first
+          const threshold = 30 * 24 * 60 * 60 * 1000;
+          const aInactive = aLast ? (now.getTime() - aLast) > threshold : true;
+          const bInactive = bLast ? (now.getTime() - bLast) > threshold : true;
+          if (aInactive !== bInactive) return aInactive ? -1 : 1;
+          return bLast - aLast;
+        }
+        default:
+          return bJoined - aJoined;
+      }
+    });
+
+    return sorted;
+  }, [users, activeTab, search, minBookings, maxBookings, sort, userStats]);
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -153,6 +245,12 @@ export default function UnifiedUserManagementPage() {
         </div>
         <div className="flex gap-3">
           <button onClick={fetchUsers} className="p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all font-bold">🔄</button>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name/email/id..."
+            className="px-4 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm text-slate-700 outline-none w-[260px]"
+          />
           <button onClick={() => setShowAddForm(!showAddForm)} className="btn-primary">
             {showAddForm ? 'Cancel' : 'Elevate Staff Member'}
           </button>
@@ -222,6 +320,68 @@ export default function UnifiedUserManagementPage() {
         ))}
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Bookings count</p>
+          <div className="flex gap-2">
+            <input
+              value={minBookings}
+              onChange={(e) => setMinBookings(e.target.value)}
+              placeholder="Min"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold text-xs"
+              inputMode="numeric"
+            />
+            <input
+              value={maxBookings}
+              onChange={(e) => setMaxBookings(e.target.value)}
+              placeholder="Max"
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold text-xs"
+              inputMode="numeric"
+            />
+          </div>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Sort</p>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as UserSort)}
+            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-sm bg-white"
+          >
+            <option value="joined_desc">Newest users</option>
+            <option value="joined_asc">Oldest users</option>
+            <option value="bookings_desc">Most bookings</option>
+            <option value="bookings_asc">Least bookings</option>
+            <option value="last_activity_desc">Last activity (recent)</option>
+            <option value="inactive_first">Inactive first (30+ days)</option>
+          </select>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm lg:col-span-2">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Interpretation</p>
+          <p className="text-[11px] text-slate-600 font-semibold leading-relaxed">
+            <span className="font-black text-slate-900">Bookings</span> is total booking docs by user.{" "}
+            <span className="font-black text-slate-900">Last activity</span> uses latest booking timestamp (created/start/end).
+          </p>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Results</p>
+            <p className="text-2xl font-black text-slate-900">{filteredUsers.length}</p>
+          </div>
+          <button
+            onClick={() => {
+              setSearch('');
+              setMinBookings('');
+              setMaxBookings('');
+              setSort('joined_desc');
+              setActiveTab('all');
+            }}
+            className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
       <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -239,6 +399,14 @@ export default function UnifiedUserManagementPage() {
                   <td className="py-4 px-6">
                     <p className="font-bold text-slate-900">{user.full_name || user.name || 'Anonymous User'}</p>
                     <p className="text-[10px] text-slate-500 font-medium">{user.email || user.id}</p>
+                    <div className="mt-2 flex gap-2 flex-wrap">
+                      <span className="px-2 py-1 rounded-lg text-[10px] font-black bg-slate-100 text-slate-700">
+                        {userStats.counts[user.id] ?? 0} booking(s)
+                      </span>
+                      <span className="px-2 py-1 rounded-lg text-[10px] font-black bg-slate-100 text-slate-700">
+                        last: {userStats.last[user.id] ? userStats.last[user.id].toLocaleDateString() : 'N/A'}
+                      </span>
+                    </div>
                   </td>
                   <td className="py-4 px-6">
                       <select
@@ -275,7 +443,7 @@ export default function UnifiedUserManagementPage() {
               {filteredUsers.length === 0 && (
                 <tr>
                    <td colSpan={4} className="py-20 text-center">
-                      <p className="text-slate-400 text-sm font-medium">No accounts found in the {activeTab} directory.</p>
+                      <p className="text-slate-400 text-sm font-medium">No accounts match the current filters.</p>
                    </td>
                 </tr>
               )}

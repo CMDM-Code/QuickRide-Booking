@@ -11,6 +11,8 @@ export interface Profile {
 export interface Location {
   id: string;
   name: string;
+  type?: string;
+  parentId?: string;
 }
 
 export interface CarType {
@@ -29,6 +31,43 @@ export interface PricingRate {
   location?: Location;
   car_type?: CarType;
 }
+
+export interface PricingSheet {
+  id: string;
+  rates: Record<
+    string,
+    {
+      "12h": number | null;
+      "24h": number | null;
+    }
+  >;
+  created_at?: any;
+}
+
+export type BookingFormFieldType = "text" | "number" | "date" | "select" | "textarea";
+
+export type BookingFormCustomField = {
+  key: string; // stored in booking.custom_fields[key]
+  label: string;
+  type: BookingFormFieldType;
+  required?: boolean;
+  enabled?: boolean;
+  placeholder?: string;
+  options?: string[]; // for select
+  order?: number;
+};
+
+export type BookingFormConfig = {
+  version: number;
+  fields: {
+    locations?: { enabled: boolean; maxDestinations: number; allowMultiDestination: boolean };
+    specific_address?: { enabled: boolean; required: boolean; label: string; placeholder?: string };
+    with_driver?: { enabled: boolean; label: string };
+    start_end?: { enabled: boolean; minHours: number };
+  };
+  custom_fields: BookingFormCustomField[];
+  updated_at?: any;
+};
 
 export interface Vehicle {
   id: string;
