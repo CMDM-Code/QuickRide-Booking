@@ -22,7 +22,7 @@ export default function StaffLayout({
     } else {
       setIsVerified(true);
       const session = staffAuth.getSession();
-      setStaffName(session?.name || 'Staff');
+      setStaffName(session?.email || 'Staff member');
     }
   }, [router]);
 

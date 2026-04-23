@@ -86,8 +86,8 @@ export default function BookingsPage() {
       const fetched = await fetchUserBookings(userId);
       
       const processed = fetched.map(data => {
-        let sDate = data.start_date;
-        let eDate = data.end_date;
+        let sDate = data.start_date as any;
+        let eDate = data.end_date as any;
         
         if (sDate && typeof sDate.toDate === 'function') sDate = sDate.toDate();
         else if (sDate) sDate = new Date(sDate);
@@ -104,8 +104,8 @@ export default function BookingsPage() {
       
       // Sort newest first
       processed.sort((a,b) => {
-         const timeA = a.created_at?.toMillis ? a.created_at.toMillis() : (a.created_at ? new Date(a.created_at).getTime() : 0);
-         const timeB = b.created_at?.toMillis ? b.created_at.toMillis() : (b.created_at ? new Date(b.created_at).getTime() : 0);
+         const timeA = (a.created_at as any)?.toMillis ? (a.created_at as any).toMillis() : (a.created_at ? new Date(a.created_at).getTime() : 0);
+         const timeB = (b.created_at as any)?.toMillis ? (b.created_at as any).toMillis() : (b.created_at ? new Date(b.created_at).getTime() : 0);
          return timeB - timeA;
       });
 

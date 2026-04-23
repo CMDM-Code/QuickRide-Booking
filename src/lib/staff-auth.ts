@@ -11,5 +11,9 @@ export const staffAuth = {
 
   logout: (): void => {
     clearPortalSession();
+  },
+
+  getSession: () => {
+    return getPortalSession();
   }
 };
