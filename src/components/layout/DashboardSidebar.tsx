@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import Image from "next/image";
-import logo from "@/assets/images/quickride_logo.png";
+import { useBranding } from "@/components/providers/BrandingProvider";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: "📊" },
@@ -19,6 +19,7 @@ const navigation = [
 ];
 
 const Sidebar = () => {
+  const { branding } = useBranding();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -60,14 +61,14 @@ const Sidebar = () => {
           <div className="p-8 pb-6">
             <Link href="/" className="flex items-center space-x-3 group">
               <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 group-hover:scale-110 transition-transform">
-                <Image 
-                  src={logo} 
-                  alt="QuickRide Booking" 
+                <img 
+                  src={branding.logo_url} 
+                  alt={branding.system_name} 
                   className="w-full h-full object-contain"
                 />
               </div>
               <div>
-                <span className="text-xl font-black text-white tracking-tighter block leading-none">QuickRide Booking</span>
+                <span className="text-xl font-black text-white tracking-tighter block leading-none">{branding.system_name}</span>
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-green-500/80">Premium Access</span>
               </div>
             </Link>
@@ -114,7 +115,7 @@ const Sidebar = () => {
             <span>Back to Main Site</span>
           </Link>
           <div className="mt-4 text-center">
-            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">© 2026 QuickRide Booking</p>
+            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">© 2026 {branding.system_name}</p>
           </div>
         </div>
       </aside>

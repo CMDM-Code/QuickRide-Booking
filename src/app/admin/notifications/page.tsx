@@ -1,5 +1,15 @@
 'use client';
 import { useState, useEffect } from "react";
+import { authClient } from "@/lib/auth-client";
+import { 
+  subscribeToNotifications, 
+  markAsRead, 
+  markAllAsRead, 
+  deleteNotification 
+} from "@/lib/notification-service";
+import { Notification } from "@/lib/types";
+import { formatDistanceToNow } from "date-fns";
+import { Bell, Calendar, MessageSquare, Tag, Info, Trash2, CheckCircle, Settings, Inbox, Plus } from "lucide-react";
 
 interface AutoNotificationRule {
   id: string;
@@ -46,6 +56,9 @@ const saveAutoRules = (rules: AutoNotificationRule[]) => {
 };
 
 export default function NotificationsPage() {
+  const [activeTab, setActiveTab] = useState<'inbox' | 'rules'>('inbox');
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
   const [rules, setRules] = useState<AutoNotificationRule[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newRule, setNewRule] = useState({
@@ -58,7 +71,31 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     setRules(getAutoRules());
+    const user = authClient.getCurrentUser();
+    if (user) {
+      setUserId(user.id);
+      const unsubscribe = subscribeToNotifications(user.id, (data) => {
+        setNotifications(data);
+      });
+      return () => unsubscribe();
+    }
   }, []);
+
+  const handleMarkAllAsRead = async () => {
+    if (userId) {
+      await markAllAsRead(userId);
+    }
+  };
+
+  const getIcon = (type: Notification['type']) => {
+    switch (type) {
+      case 'booking_status': return <Calendar className="w-5 h-5 text-blue-500" />;
+      case 'chat': return <MessageSquare className="w-5 h-5 text-green-500" />;
+      case 'promotion': return <Tag className="w-5 h-5 text-amber-500" />;
+      case 'reminder': return <Calendar className="w-5 h-5 text-purple-500" />;
+      default: return <Info className="w-5 h-5 text-slate-500" />;
+    }
+  };
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,39 +145,165 @@ export default function NotificationsPage() {
   const getConditionLabel = (value: string) => CONDITIONS.find(c => c.value === value)?.label || value;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Auto-Notifications</h1>
-          <p className="text-slate-600 mt-1">Set up automated alerts for bookings, payments, and vehicle returns</p>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">System Notifications</h1>
+          <p className="text-slate-500 font-medium mt-1">Manage system alerts and automated messaging rules.</p>
         </div>
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="btn-primary"
-        >
-          {showCreateForm ? 'Cancel' : 'Create Rule'}
-        </button>
+        <div className="flex bg-white p-1 rounded-2xl border border-slate-100 shadow-sm">
+          <button
+            onClick={() => setActiveTab('inbox')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
+              activeTab === 'inbox' ? 'bg-slate-950 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <Inbox className="w-4 h-4" />
+            Admin Inbox
+            {notifications.filter(n => !n.read).length > 0 && (
+              <span className="ml-1 w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full">
+                {notifications.filter(n => !n.read).length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('rules')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
+              activeTab === 'rules' ? 'bg-slate-950 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            Auto-Rules
+          </button>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card p-5">
-          <p className="text-sm text-slate-500">Total Rules</p>
-          <p className="text-2xl font-bold text-slate-900">{rules.length}</p>
+      {activeTab === 'inbox' ? (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+              <Inbox className="w-5 h-5 text-blue-600" />
+              Notifications for Admin
+            </h2>
+            {notifications.some(n => !n.read) && (
+              <button
+                onClick={handleMarkAllAsRead}
+                className="flex items-center gap-2 px-4 py-2 text-blue-600 font-bold text-sm hover:underline"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Mark all as read
+              </button>
+            )}
+          </div>
+
+          {notifications.length === 0 ? (
+            <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-20 text-center">
+              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Bell className="w-10 h-10 text-slate-200" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 mb-2">Inbox is empty</h3>
+              <p className="text-slate-500 font-medium max-w-sm mx-auto">
+                No system alerts or customer requests at the moment.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {notifications.map((n) => (
+                <div
+                  key={n.id}
+                  className={`group relative bg-white rounded-2xl border transition-all p-5 flex gap-5 ${
+                    !n.read 
+                      ? 'border-blue-100 bg-blue-50/20 shadow-sm' 
+                      : 'border-slate-100 hover:border-slate-200'
+                  }`}
+                >
+                  <div className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${!n.read ? 'bg-white shadow-sm' : 'bg-slate-50'}`}>
+                    {getIcon(n.type)}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className={`font-bold text-lg leading-tight ${!n.read ? 'text-slate-900' : 'text-slate-600'}`}>
+                          {n.title}
+                        </h3>
+                        <p className="text-sm text-slate-500 mt-1 leading-relaxed">{n.message}</p>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap mt-1">
+                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                      </span>
+                    </div>
+
+                    <div className="flex gap-4 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {!n.read && (
+                        <button 
+                          onClick={() => markAsRead(n.id)}
+                          className="text-xs font-black text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          <CheckCircle className="w-3 h-3" />
+                          Mark as read
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => deleteNotification(n.id)}
+                        className="text-xs font-black text-red-500 hover:underline flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+
+                  {!n.read && (
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="card p-5">
-          <p className="text-sm text-slate-500">Active</p>
-          <p className="text-2xl font-bold text-green-700">{rules.filter(r => r.active).length}</p>
-        </div>
-        <div className="card p-5">
-          <p className="text-sm text-slate-500">Email Rules</p>
-          <p className="text-2xl font-bold text-blue-600">{rules.filter(r => r.channel === 'email' || r.channel === 'all').length}</p>
-        </div>
-        <div className="card p-5">
-          <p className="text-sm text-slate-500">Inactive</p>
-          <p className="text-2xl font-bold text-slate-400">{rules.filter(r => !r.active).length}</p>
-        </div>
-      </div>
+      ) : (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                <Settings className="w-5 h-5 text-green-700" />
+                Automated Rules
+              </h2>
+              <p className="text-sm text-slate-500 font-medium">Define automated triggers for customer alerts.</p>
+            </div>
+            <button
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 ${
+                showCreateForm 
+                  ? 'bg-slate-100 text-slate-600' 
+                  : 'bg-green-700 text-white shadow-xl shadow-green-700/20 hover:bg-green-800'
+              }`}
+            >
+              {showCreateForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {showCreateForm ? 'Cancel' : 'New Rule'}
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Total Rules</p>
+              <p className="text-3xl font-black text-slate-900">{rules.length}</p>
+            </div>
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Active</p>
+              <p className="text-3xl font-black text-green-700">{rules.filter(r => r.active).length}</p>
+            </div>
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Email Rules</p>
+              <p className="text-3xl font-black text-blue-600">{rules.filter(r => r.channel === 'email' || r.channel === 'all').length}</p>
+            </div>
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Inactive</p>
+              <p className="text-3xl font-black text-slate-300">{rules.filter(r => !r.active).length}</p>
+            </div>
+          </div>
 
       {/* Create Form */}
       {showCreateForm && (

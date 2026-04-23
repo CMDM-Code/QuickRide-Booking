@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import logo from "@/assets/images/quickride_logo.png";
 import { authClient } from "@/lib/auth-client";
+import NotificationBell from "@/components/ui/NotificationBell";
+import { useBranding } from "@/components/providers/BrandingProvider";
 
 const Navbar = () => {
+  const { branding } = useBranding();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -37,15 +39,14 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16 md:h-20">
           <Link href="/" className="flex items-center space-x-2">
             <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0">
-              <Image 
-                src={logo} 
-                alt="QuickRide Booking" 
+              <img 
+                src={branding.logo_url} 
+                alt={branding.system_name} 
                 className="w-full h-full object-contain"
-                priority
               />
             </div>
             <span className="text-xl font-bold text-slate-900 tracking-tight">
-              QuickRide Booking
+              {branding.system_name}
             </span>
           </Link>
 
@@ -67,11 +68,13 @@ const Navbar = () => {
             </Link>
 
             {isAuthenticated ? (
-              <div className="relative">
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-2.5 bg-slate-100 hover:bg-slate-200 text-slate-900 px-5 py-2 rounded-full text-sm font-bold border border-slate-200 transition-all active:scale-95 group"
-                >
+              <div className="flex items-center gap-4">
+                <NotificationBell />
+                <div className="relative">
+                  <button
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="flex items-center gap-2.5 bg-slate-100 hover:bg-slate-200 text-slate-900 px-5 py-2 rounded-full text-sm font-bold border border-slate-200 transition-all active:scale-95 group"
+                  >
                   <div className="w-6 h-6 rounded-full bg-green-700 flex items-center justify-center text-[10px] text-white">
                     {userName?.charAt(0) || "U"}
                   </div>

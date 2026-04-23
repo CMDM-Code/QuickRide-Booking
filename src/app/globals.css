@@ -7,9 +7,9 @@
     --foreground: #0f172a;
     --card: #ffffff;
     --card-foreground: #0f172a;
-    --primary: #15803d;
+    --primary: var(--primary-brand, #15803d);
     --primary-foreground: #ffffff;
-    --secondary: #0f172a;
+    --secondary: var(--secondary-brand, #0f172a);
     --secondary-foreground: #ffffff;
     --accent: #4ade80;
     --accent-foreground: #0f172a;

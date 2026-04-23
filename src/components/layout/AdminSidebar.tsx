@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import logo from "@/assets/images/quickride_logo.png";
 import { clearPortalSession } from "@/lib/portal-auth";
+import { useBranding } from "@/components/providers/BrandingProvider";
 
 const AdminSidebar = () => {
+  const { branding } = useBranding();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -21,9 +22,13 @@ const AdminSidebar = () => {
     { name: "Booking Management", href: "/admin/bookings", icon: "📋" },
     { name: "Reports", href: "/admin/reports", icon: "📈" },
     { name: "Media Library", href: "/admin/media", icon: "🖼️" },
+    { name: "Customer Support", href: "/admin/messages", icon: "💬" },
     { name: "Notifications", href: "/admin/notifications", icon: "🔔" },
+    { name: "Branding", href: "/admin/settings/branding", icon: "🎨" },
+    { name: "Booking Form", href: "/admin/settings/booking-form", icon: "🧩" },
     { name: "System Settings", href: "/admin/settings", icon: "⚙️" },
-    { name: "Booking Form Settings", href: "/admin/settings/booking-form", icon: "🧩" },
+    { name: "System Logs", href: "/admin/logs", icon: "📋" },
+    { name: "Security", href: "/admin/security", icon: "🛡️" },
     { name: "Security Logs", href: "/admin/security", icon: "🔒" },
   ];
 
@@ -54,14 +59,14 @@ const AdminSidebar = () => {
           <div className="p-8 pb-6 border-b border-white/5">
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-lg shadow-green-900/40">
-                <Image 
-                  src={logo} 
-                  alt="QuickRide Booking" 
+                <img 
+                  src={branding.logo_url} 
+                  alt={branding.system_name} 
                   className="w-full h-full object-contain"
                 />
               </div>
               <div>
-                <span className="text-xl font-black text-white tracking-tighter block leading-none">QuickRide Booking</span>
+                <span className="text-xl font-black text-white tracking-tighter block leading-none">{branding.system_name}</span>
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500">Admin Control</span>
               </div>
             </div>

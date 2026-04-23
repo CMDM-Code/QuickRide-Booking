@@ -6,6 +6,82 @@ export interface Profile {
   driving_license: string;
   role: 'customer' | 'staff' | 'admin';
   created_at: string;
+  notification_preferences?: NotificationPreferences;
+}
+
+export interface NotificationPreferences {
+  in_app: boolean;
+  email: boolean;
+  sms: boolean;
+  types: {
+    booking_updates: boolean;
+    promotions: boolean;
+    reminders: boolean;
+    chat: boolean;
+  };
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: 'booking_status' | 'reminder' | 'chat' | 'system' | 'promotion';
+  title: string;
+  message: string;
+  data?: {
+    booking_id?: string;
+    chat_id?: string;
+    [key: string]: any;
+  };
+  read: boolean;
+  created_at: string;
+  scheduled_at?: string;
+}
+
+export interface Chat {
+  id: string; // usually booking_id
+  type: 'booking' | 'support';
+  participants: string[]; // user IDs
+  last_message?: {
+    content: string;
+    sender_id: string;
+    created_at: string;
+  };
+  updated_at: string;
+}
+
+export interface Message {
+  id: string;
+  sender_id: string;
+  sender_name: string;
+  content: string;
+  created_at: string;
+  read_by: string[]; // user IDs
+}
+
+export interface BookingParticipant {
+  user_id: string;
+  role: 'owner' | 'participant';
+  joined_at: string;
+}
+
+export interface BookingInvite {
+  id: string;
+  booking_id: string;
+  inviter_id: string;
+  email: string;
+  role: 'participant';
+  status: 'pending' | 'accepted' | 'declined';
+  created_at: string;
+}
+
+export interface BrandingConfig {
+  system_name: string;
+  logo_url: string;
+  theme_colors: {
+    primary: string;
+    secondary: string;
+  };
+  updated_at?: any;
 }
 
 export interface Location {
@@ -97,10 +173,23 @@ export interface Booking {
   is_edit_pending: boolean;
   edit_details: any;
   created_at: string;
+  participants?: BookingParticipant[];
+  participant_ids?: string[]; // user IDs
+  assigned_staff_id?: string; // staff ID
   // Join data
   vehicle?: Vehicle;
   pickup_location?: Location;
   profile?: Profile;
+}
+
+export interface SystemLog {
+  id: string;
+  type: 'error' | 'warning' | 'info';
+  message: string;
+  stack?: string;
+  user_id?: string;
+  created_at: string;
+  data?: any;
 }
 
 export interface PricingData {

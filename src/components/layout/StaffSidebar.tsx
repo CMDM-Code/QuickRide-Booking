@@ -4,9 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import logo from "@/assets/images/quickride_logo.png";
+import { useBranding } from "@/components/providers/BrandingProvider";
 
 const StaffSidebar = () => {
+  const { branding } = useBranding();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -17,6 +18,7 @@ const StaffSidebar = () => {
     { name: "Assign Vehicle", href: "/staff/assign", icon: "🚗" },
     { name: "Active Rentals", href: "/staff/rentals", icon: "📍" },
     { name: "Customers", href: "/staff/customers", icon: "👤" },
+    { name: "Messages", href: "/staff/messages", icon: "💬" },
     { name: "Fleet Management", href: "/staff/fleet", icon: "🔧" },
     { name: "Notifications", href: "/staff/notifications", icon: "🔔" },
   ];
@@ -63,15 +65,15 @@ const StaffSidebar = () => {
           <div className="p-6 border-b border-slate-100">
             <div className="flex items-center space-x-2">
             <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0">
-              <Image 
-                src={logo} 
-                alt="QuickRide Booking" 
+              <img 
+                src={branding.logo_url} 
+                alt={branding.system_name} 
                 className="w-full h-full object-contain"
               />
             </div>
               <div>
                 <span className="text-lg font-bold text-slate-900 tracking-tight">
-                  QuickRide Booking
+                  {branding.system_name}
                 </span>
                 <p className="text-xs text-slate-500">Staff Portal</p>
               </div>

@@ -2,173 +2,130 @@
 
 import StaffLayout from "../layout";
 import { useEffect, useState } from "react";
-import { staffStore } from "@/lib/staff-store";
-
-interface Notification {
-  id: string;
-  type: 'critical' | 'high' | 'medium';
-  title: string;
-  message: string;
-  timestamp: number;
-  read: boolean;
-}
-
-const formatTimeAgo = (timestamp: number): string => {
-  const now = Date.now();
-  const diffMs = now - timestamp;
-  const diffMins = Math.floor(diffMs / 60000);
-  
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} minutes ago`;
-  
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours} hours ago`;
-  
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays} days ago`;
-};
+import { authClient } from "@/lib/auth-client";
+import { 
+  subscribeToNotifications, 
+  markAsRead, 
+  markAllAsRead, 
+  deleteNotification 
+} from "@/lib/notification-service";
+import { Notification } from "@/lib/types";
+import { formatDistanceToNow } from "date-fns";
+import { Bell, Calendar, MessageSquare, Tag, Info, Trash2, CheckCircle, AlertTriangle } from "lucide-react";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Generate dynamic notifications from live database data
-    const generatedNotifications: Notification[] = [];
-    const now = Date.now();
-
-    // 🔴 CRITICAL: Overdue Vehicle Returns
-    const bookings = staffStore.getBookings();
-    bookings.forEach(booking => {
-      if (booking.status === 'active') {
-        const returnDate = new Date(booking.returnDate).getTime();
-        if (now > returnDate) {
-          const overdueMs = now - returnDate;
-          const overdueMins = Math.floor(overdueMs / 60000);
-          generatedNotifications.push({
-            id: `overdue-${booking.id}`,
-            type: 'critical',
-            title: 'Overdue Vehicle Return',
-            message: `Booking ${booking.id} - ${booking.customerName} is ${overdueMins} minutes overdue`,
-            timestamp: returnDate,
-            read: false
-          });
-        }
-      }
-    });
-
-    // 🟠 HIGH PRIORITY: New pending bookings waiting for approval
-    const pendingBookings = bookings.filter(b => b.status === 'pending');
-    pendingBookings.forEach(booking => {
-      generatedNotifications.push({
-        id: `booking-${booking.id}`,
-        type: 'high',
-        title: 'New Booking Request',
-        message: `${booking.customerName} has booked ${booking.vehicleName}`,
-        timestamp: new Date(booking.createdAt).getTime(),
-        read: false
+    const user = authClient.getCurrentUser();
+    if (user) {
+      setUserId(user.id);
+      const unsubscribe = subscribeToNotifications(user.id, (data) => {
+        setNotifications(data);
       });
-    });
-
-    // 🔵 MEDIUM: Vehicle Service Alerts
-    const vehicles = staffStore.getVehicles();
-    vehicles.forEach(vehicle => {
-      if (vehicle.mileage > 45000) {
-        generatedNotifications.push({
-          id: `service-${vehicle.id}`,
-          type: 'medium',
-          title: 'Vehicle Service Due',
-          message: `${vehicle.name} ${vehicle.plate} is due for maintenance (${vehicle.mileage.toLocaleString()} km)`,
-          timestamp: now - (Math.random() * 86400000 * 2),
-          read: false
-        });
-      }
-    });
-
-    // Sort by timestamp newest first
-    generatedNotifications.sort((a, b) => b.timestamp - a.timestamp);
-
-    // Load read status from storage
-    const readIds = JSON.parse(localStorage.getItem('quickride_read_notifications') || '[]');
-    generatedNotifications.forEach(n => {
-      n.read = readIds.includes(n.id);
-    });
-
-    setNotifications(generatedNotifications);
+      return () => unsubscribe();
+    }
   }, []);
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? {...n, read: true} : n));
-    
-    const readIds = JSON.parse(localStorage.getItem('quickride_read_notifications') || '[]');
-    if (!readIds.includes(id)) {
-      readIds.push(id);
-      localStorage.setItem('quickride_read_notifications', JSON.stringify(readIds));
+  const handleMarkAllAsRead = async () => {
+    if (userId) {
+      await markAllAsRead(userId);
     }
   };
 
-  const markAllAsRead = () => {
-    const allIds = notifications.map(n => n.id);
-    localStorage.setItem('quickride_read_notifications', JSON.stringify(allIds));
-    setNotifications(prev => prev.map(n => ({...n, read: true})));
-  };
-
-  const getTypeStyles = (type: string) => {
+  const getIcon = (type: Notification['type']) => {
     switch (type) {
-      case 'critical': return { dot: 'bg-red-500', badge: 'bg-red-100 text-red-800' };
-      case 'high': return { dot: 'bg-amber-500', badge: 'bg-amber-100 text-amber-800' };
-      case 'medium': return { dot: 'bg-blue-500', badge: 'bg-blue-100 text-blue-800' };
-      default: return { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-800' };
+      case 'booking_status': return <Calendar className="w-6 h-6 text-blue-500" />;
+      case 'chat': return <MessageSquare className="w-6 h-6 text-green-500" />;
+      case 'promotion': return <Tag className="w-6 h-6 text-amber-500" />;
+      case 'reminder': return <Calendar className="w-6 h-6 text-purple-500" />;
+      default: return <Info className="w-6 h-6 text-slate-500" />;
     }
   };
 
   return (
     <StaffLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
-            <p className="text-slate-600 mt-1">System alerts and staff updates</p>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Staff Notifications</h1>
+            <p className="text-slate-500 font-medium mt-1">Review system alerts, booking requests, and customer messages.</p>
           </div>
           {notifications.some(n => !n.read) && (
-            <button 
-              onClick={markAllAsRead}
-              className="text-green-700 hover:text-green-800 font-medium"
+            <button
+              onClick={handleMarkAllAsRead}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-100 transition-all active:scale-95"
             >
+              <CheckCircle className="w-4 h-4" />
               Mark all as read
             </button>
           )}
         </div>
 
         {notifications.length === 0 ? (
-          <div className="card py-12 text-center">
-            <div className="text-5xl mb-4">🔔</div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">All Caught Up!</h3>
-            <p className="text-slate-600">There are no active notifications at this time.</p>
+          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-20 text-center">
+            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Bell className="w-10 h-10 text-slate-200" />
+            </div>
+            <h3 className="text-2xl font-black text-slate-900 mb-2">No active alerts</h3>
+            <p className="text-slate-500 font-medium max-w-sm mx-auto">
+              Everything is running smoothly. We'll notify you when there's a new booking or message.
+            </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {notifications.map((notification) => {
-              const styles = getTypeStyles(notification.type);
-              return (
-                <div 
-                  key={notification.id} 
-                  onClick={() => markAsRead(notification.id)}
-                  className={`card cursor-pointer transition-all ${!notification.read ? 'border-l-4 border-l-green-700' : ''}`}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={`w-2 h-2 rounded-full mt-2 ${styles.dot}`}></div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between gap-4">
-                        <h3 className="font-semibold text-slate-900">{notification.title}</h3>
-                        <span className={`badge ${styles.badge} capitalize`}>{notification.type}</span>
-                      </div>
-                      <p className="text-slate-600 mt-1">{notification.message}</p>
-                      <p className="text-xs text-slate-400 mt-2">{formatTimeAgo(notification.timestamp)}</p>
+          <div className="grid gap-3">
+            {notifications.map((n) => (
+              <div
+                key={n.id}
+                className={`group relative bg-white rounded-2xl border transition-all p-5 flex gap-5 ${
+                  !n.read 
+                    ? 'border-blue-100 bg-blue-50/20 shadow-sm' 
+                    : 'border-slate-100 hover:border-slate-200'
+                }`}
+              >
+                <div className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${!n.read ? 'bg-white shadow-sm' : 'bg-slate-50'}`}>
+                  {getIcon(n.type)}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className={`font-bold text-lg leading-tight ${!n.read ? 'text-slate-900' : 'text-slate-600'}`}>
+                        {n.title}
+                      </h3>
+                      <p className="text-sm text-slate-500 mt-1 leading-relaxed">{n.message}</p>
                     </div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap mt-1">
+                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-4 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {!n.read && (
+                      <button 
+                        onClick={() => markAsRead(n.id)}
+                        className="text-xs font-black text-blue-600 hover:underline flex items-center gap-1"
+                      >
+                        <CheckCircle className="w-3 h-3" />
+                        Mark as read
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => deleteNotification(n.id)}
+                      className="text-xs font-black text-red-500 hover:underline flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Delete
+                    </button>
                   </div>
                 </div>
-              );
-            })}
+
+                {!n.read && (
+                  <div className="absolute right-6 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

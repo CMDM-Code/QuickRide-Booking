@@ -8,10 +8,16 @@ import {
   orderBy, 
   updateDoc, 
   doc, 
+  getDoc,
   Timestamp
 } from "firebase/firestore";
 import { adminStore } from "@/lib/admin-store";
 import { withTimeout } from "@/lib/api-utils";
+import { createNotification } from "@/lib/notification-service";
+import { fetchStaffMembers, assignBookingToStaff } from "@/lib/staff-service";
+import { Profile } from "@/lib/types";
+import { authClient } from "@/lib/auth-client";
+import { User, ShieldCheck, UserPlus } from "lucide-react";
 
 type BookingSort =
   | 'created_desc'
@@ -32,7 +38,9 @@ function toDate(v: any): Date | null {
 
 export default function BookingManagementPage() {
   const [bookings, setBookings] = useState<any[]>([]);
+  const [staff, setStaff] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAssigning, setIsAssigning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [mode, setMode] = useState<'cloud' | 'local'>('cloud');
@@ -46,7 +54,13 @@ export default function BookingManagementPage() {
 
   useEffect(() => {
     fetchBookings();
+    fetchStaff();
   }, []);
+
+  async function fetchStaff() {
+    const data = await fetchStaffMembers();
+    setStaff(data);
+  }
 
   async function fetchBookings() {
     setLoading(true);
@@ -120,7 +134,22 @@ export default function BookingManagementPage() {
     if (mode === 'cloud' && db) {
       try {
         const bookingRef = doc(db, 'bookings', id);
+        const bookingSnap = await getDoc(bookingRef);
+        const bookingData = bookingSnap.data();
+
         await updateDoc(bookingRef, { status });
+
+        // Notify Customer
+        if (bookingData?.user_id) {
+          await createNotification({
+            user_id: bookingData.user_id,
+            type: 'booking_status',
+            title: `Booking ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+            message: `Your booking for ${bookingData.vehicle_name || 'your vehicle'} has been ${status}.`,
+            data: { booking_id: id }
+          });
+        }
+
         fetchBookings();
       } catch (err) {
           console.error("Error updating booking status:", err);
@@ -128,6 +157,19 @@ export default function BookingManagementPage() {
     } else {
       adminStore.updateBookingStatus(id, status as any);
       fetchBookings();
+    }
+  };
+
+  const handleAssignStaff = async (bookingId: string, staffId: string) => {
+    setIsAssigning(bookingId);
+    try {
+      const admin = authClient.getCurrentUser();
+      await assignBookingToStaff(bookingId, staffId, admin?.name || 'Admin');
+      fetchBookings();
+    } catch (err) {
+      console.error("Error assigning staff:", err);
+    } finally {
+      setIsAssigning(null);
     }
   };
 
@@ -369,6 +411,7 @@ export default function BookingManagementPage() {
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="p-6 text-left text-sm font-bold text-slate-500 uppercase">Customer</th>
                   <th className="p-6 text-left text-sm font-bold text-slate-500 uppercase">Vehicle</th>
+                  <th className="p-6 text-left text-sm font-bold text-slate-500 uppercase">Staff</th>
                   <th className="p-6 text-left text-sm font-bold text-slate-500 uppercase">Duration</th>
                   <th className="p-6 text-left text-sm font-bold text-slate-500 uppercase">Status</th>
                 </tr>
@@ -379,6 +422,16 @@ export default function BookingManagementPage() {
                     <td className="p-6">
                       <p className="font-black text-slate-900">{booking.profile?.full_name}</p>
                       <p className="text-[10px] text-slate-500 font-mono italic">{booking.id}</p>
+                      {booking.participants && booking.participants.length > 0 && (
+                        <div className="flex items-center -space-x-2 mt-2">
+                          {booking.participants.map((p: any) => (
+                            <div key={p.user_id} className="w-6 h-6 rounded-full bg-slate-100 border border-white flex items-center justify-center text-[8px] font-bold text-slate-500 shadow-sm" title={p.user_id}>
+                              {p.user_id.charAt(0).toUpperCase()}
+                            </div>
+                          ))}
+                          <span className="ml-2 text-[10px] font-bold text-slate-400">+{booking.participants.length} Guest(s)</span>
+                        </div>
+                      )}
                     </td>
                     <td className="p-6 font-bold text-slate-900">
                       {booking.vehicle?.name}
@@ -387,6 +440,34 @@ export default function BookingManagementPage() {
                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{booking.vehicle.car_type_id}</span>
                         </div>
                       )}
+                    </td>
+                    <td className="p-6">
+                      <div className="flex flex-col gap-2">
+                        {booking.assigned_staff_id ? (
+                          <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-xl border border-blue-100">
+                            <div className="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center text-white text-[10px] font-black">
+                              {staff.find(s => s.id === booking.assigned_staff_id)?.full_name?.charAt(0) || 'S'}
+                            </div>
+                            <span className="text-xs font-bold text-blue-700">
+                              {staff.find(s => s.id === booking.assigned_staff_id)?.full_name || 'Assigned Staff'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-300 italic">Unassigned</span>
+                        )}
+                        
+                        <select
+                          className="text-[10px] font-bold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-green-500/20"
+                          value={booking.assigned_staff_id || ""}
+                          onChange={(e) => handleAssignStaff(booking.id, e.target.value)}
+                          disabled={isAssigning === booking.id}
+                        >
+                          <option value="">{booking.assigned_staff_id ? 'Reassign Staff' : 'Assign Staff'}</option>
+                          {staff.map((s) => (
+                            <option key={s.id} value={s.id}>{s.full_name}</option>
+                          ))}
+                        </select>
+                      </div>
                     </td>
                     <td className="p-6 text-xs">
                       <p className="font-bold text-slate-800">

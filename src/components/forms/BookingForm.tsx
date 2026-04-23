@@ -15,11 +15,14 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { Location, PricingRate, PricingSheet } from "@/lib/types";
 import { calculateTotalRental } from "@/lib/pricing-engine";
+import { createNotification } from "@/lib/notification-service";
 import { buildLocationsIndex, resolveRatesForLocation } from "@/lib/pricing";
 import { applyScheduleAdjustment, normalizeSchedule, pickActiveSchedule, type PricingSchedule } from "@/lib/schedules";
 import { DEFAULT_BOOKING_FORM_CONFIG, normalizeBookingFormConfig } from "@/lib/booking-form-config";
-import { format, isValid } from "date-fns";
+import { logSystemError } from "@/lib/error-service";
+import { format, isValid, differenceInHours } from "date-fns";
 import { MOCK_LOCATIONS, MOCK_VEHICLES, MOCK_RATES } from "@/lib/mock-data";
+import { AlertCircle, CheckCircle2, Info, RefreshCw } from "lucide-react";
 
 // Leaflet imports need to be handled carefully in Next.js (SSR)
 let L: any;
@@ -56,6 +59,8 @@ export default function BookingForm() {
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("08:00");
   const [withDriver, setWithDriver] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Availability State
   const [availabilityStatus, setAvailabilityStatus] = useState<'available' | 'warning' | 'blocked'>('available');
@@ -188,21 +193,49 @@ export default function BookingForm() {
     }
   }
 
-  // Price Calculation
+  // Price Calculation & Validation
   const pricingResult = useMemo(() => {
+    setFormError(null);
+
     if (!selectedVehicleId || !startDate || !endDate || dropoffLocationIds.length === 0) return null;
 
     const start = new Date(`${startDate}T${startTime}`);
     const end = new Date(`${endDate}T${endTime}`);
     
-    if (!isValid(start) || !isValid(end) || end <= start) return null;
+    if (!isValid(start) || !isValid(end)) return null;
+    
+    if (end <= start) {
+      return { pricing: null, error: "End date must be after start date." as const };
+    }
+
+    // Enforce minHours from config
+    const hours = differenceInHours(end, start);
+    const minHours = formConfig.fields.start_end?.minHours ?? 12;
+    if (hours < minHours) {
+      return { pricing: null, error: `Minimum booking duration is ${minHours} hours. (Current: ${hours}h)` as const };
+    }
+
+    // Enforce maxDestinations from config
+    const maxDests = formConfig.fields.locations?.maxDestinations ?? 3;
+    if (dropoffLocationIds.length > maxDests) {
+      return { pricing: null, error: `Maximum of ${maxDests} destinations allowed.` as const };
+    }
 
     const vehicle = vehicles.find(v => v.id === selectedVehicleId);
-    if (!vehicle) return null;
+    if (!vehicle) {
+      return { pricing: null, error: "Invalid vehicle selection." as const };
+    }
+
+    // Validate car type reference
+    if (!vehicle.car_type_id) {
+      logSystemError(`Vehicle ${vehicle.name} (${vehicle.id}) is missing a car_type_id reference.`);
+      return { pricing: null, error: "System Configuration Error: Missing vehicle category mapping." as const };
+    }
 
     const sheet = pricingSheets.find(s => s.id === vehicle.car_type_id);
     if (!sheet) {
-      return { pricing: null, error: "Pricing sheet missing for this car type." as const };
+      logSystemError(`Missing pricing sheet for car type: ${vehicle.car_type_id}`);
+      return { pricing: null, error: "Pricing not configured for this vehicle category." as const };
     }
 
     const { byId } = buildLocationsIndex(locations);
@@ -306,27 +339,46 @@ export default function BookingForm() {
 
   const handleBookNow = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
     const user = authClient.getCurrentUser();
     if (!user) {
-        alert("Please login first to reserve a vehicle.");
-        window.location.href = "/auth/login";
+        setFormError("Please login first to reserve a vehicle.");
+        setTimeout(() => window.location.href = "/auth/login", 2000);
         return;
     }
-    if (pricing) setStep('reviewing');
+
+    if (pricingResult?.error) {
+      setFormError(pricingResult.error);
+      return;
+    }
+
+    if (availabilityStatus === 'blocked') {
+      setFormError("The selected vehicle is already booked for this period.");
+      return;
+    }
+
+    if (pricingResult?.pricing) setStep('reviewing');
   };
 
   const handleConfirm = async () => {
     if (!db) return;
+    setIsSubmitting(true);
+    setFormError(null);
+
     try {
       const user = authClient.getCurrentUser();
       if (!user) {
-        alert("Session expired. Please login again.");
+        setFormError("Session expired. Please login again.");
         window.location.href = "/auth/login";
         return;
       }
 
       const pricing = pricingResult?.pricing;
-      if (!pricing || !selectedVehicleId) return;
+      if (!pricing || !selectedVehicleId) {
+        setFormError("Invalid booking details. Please review your selection.");
+        return;
+      }
 
       // Validate required custom fields
       const enabledFields = (formConfig.custom_fields || []).filter((f) => f.enabled !== false);
@@ -334,12 +386,13 @@ export default function BookingForm() {
         .filter((f) => f.required)
         .filter((f) => !String(customFields[f.key] ?? "").trim())
         .map((f) => f.label || f.key);
+      
       if (missing.length > 0) {
-        alert("Please fill required fields: " + missing.join(", "));
+        setFormError("Please fill required fields: " + missing.join(", "));
         return;
       }
 
-      await addDoc(collection(db, 'bookings'), {
+      const bookingDoc = await addDoc(collection(db, 'bookings'), {
         user_id: user.id,
         car_id: selectedVehicleId,
         start_date: Timestamp.fromDate(new Date(`${startDate}T${startTime}`)),
@@ -350,15 +403,31 @@ export default function BookingForm() {
         custom_fields: customFields,
         with_driver: withDriver,
         pickup_location_id: 'loc_gensan',
+        participant_ids: [user.id],
         created_at: serverTimestamp()
       });
 
-      alert("Booking request sent successfully! Awaiting admin confirmation.");
+      // Notify Admins and Staff
+      const profilesSnap = await getDocs(query(collection(db, 'profiles'), where('role', 'in', ['admin', 'staff'])));
+      const notifyPromises = profilesSnap.docs.map(profileDoc => 
+        createNotification({
+          user_id: profileDoc.id,
+          type: 'booking_status',
+          title: 'New Booking Request',
+          message: `${user.name} has requested a booking for ${selectedVehicle?.name}.`,
+          data: { booking_id: bookingDoc.id }
+        })
+      );
+      await Promise.all(notifyPromises);
+
       setStep('selecting');
       window.location.href = "/dashboard/bookings";
     } catch (error: any) {
       console.error("Error creating booking:", error);
-      alert("Failed to send booking request: " + error.message);
+      setFormError("Failed to send booking request. Our team has been notified.");
+      logSystemError(error, authClient.getCurrentUser()?.id, { booking_details: { selectedVehicleId, startDate, endDate } });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -448,9 +517,40 @@ export default function BookingForm() {
               </div>
             </div>
           </div>
-          <div className="flex gap-4">
-            <button onClick={() => setStep('selecting')} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all">Back to Edit</button>
-            <button onClick={handleConfirm} className="flex-[2] py-4 bg-green-700 text-white rounded-2xl font-bold shadow-lg shadow-green-700/20 hover:bg-green-800 transition-all hover:scale-[1.02] active:scale-95">Confirm & Book Now</button>
+          <div className="pt-8 border-t border-slate-100 flex flex-col gap-4">
+            {formError && (
+              <div className="p-4 bg-red-50 text-red-700 rounded-2xl flex items-start gap-3 border border-red-100">
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <p className="text-sm font-bold">{formError}</p>
+              </div>
+            )}
+            
+            <div className="flex gap-4">
+              <button
+                onClick={() => setStep('selecting')}
+                disabled={isSubmitting}
+                className="flex-1 py-5 bg-white border border-slate-200 text-slate-900 rounded-[2rem] font-black uppercase tracking-[0.2em] text-xs hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={isSubmitting}
+                className="flex-[2] py-5 bg-green-700 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-green-700/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Confirm Booking
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -645,15 +745,29 @@ export default function BookingForm() {
             )}
           </div>
 
-          <button type="submit" className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg transition-all hover:translate-y-[-1px] active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 ${availabilityStatus === 'blocked' ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20' : 'bg-green-700 hover:bg-green-800 shadow-green-700/20'}`} disabled={!pricingResult?.pricing || availabilityStatus === 'blocked'}>
-            {availabilityStatus === 'blocked' ? '🚫 This car is already BOOKED' : pricingResult?.pricing ? `Review Booking - ₱${pricingResult.pricing.totalPrice.toLocaleString()}` : (pricingResult?.error ? 'Pricing Not Available' : 'Complete Details to Review')}
-          </button>
+          <div className="flex flex-col gap-4">
+            {formError && (
+              <div className="p-4 bg-red-50 text-red-700 rounded-2xl flex items-start gap-3 border border-red-100 animate-in slide-in-from-top-2">
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <p className="text-sm font-bold">{formError}</p>
+              </div>
+            )}
 
-          {pricingResult?.error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-[11px] font-semibold text-red-800">
-              {pricingResult.error}
-            </div>
-          )}
+            {availabilityStatus === 'blocked' && !formError && (
+              <div className="p-4 bg-amber-50 text-amber-700 rounded-2xl flex items-start gap-3 border border-amber-100">
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <p className="text-sm font-bold">This vehicle is already booked for these dates.</p>
+              </div>
+            )}
+
+            <button 
+              type="submit"
+              disabled={availabilityStatus === 'blocked' || !!pricingResult?.error}
+              className="w-full py-6 bg-slate-950 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-sm shadow-2xl shadow-slate-950/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+            >
+              Reserve Now
+            </button>
+          </div>
           
           {availabilityStatus === 'warning' && (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 items-start animate-pulse">
