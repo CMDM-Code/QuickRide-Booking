@@ -25,7 +25,7 @@ export default function AdminLayout({
       }
       if (session.authenticated === true && session.role === 'admin') {
         setIsVerified(true);
-        setAdminName(session.user?.name || 'Admin');
+        setAdminName(session.email || 'Admin');
       } else {
         router.push("/admin-login");
       }

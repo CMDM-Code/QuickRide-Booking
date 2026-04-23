@@ -29,7 +29,6 @@ const AdminSidebar = () => {
     { name: "System Settings", href: "/admin/settings", icon: "⚙️" },
     { name: "System Logs", href: "/admin/logs", icon: "📋" },
     { name: "Security", href: "/admin/security", icon: "🛡️" },
-    { name: "Security Logs", href: "/admin/security", icon: "🔒" },
   ];
 
   return (

@@ -1,13 +1,12 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { authClient } from "@/lib/auth-client";
 import NotificationBell from "@/components/ui/NotificationBell";
 import { useBranding } from "@/components/providers/BrandingProvider";
 
-const Navbar = () => {
+export default function Navbar() {
   const { branding } = useBranding();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -34,8 +33,7 @@ const Navbar = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[999] backdrop-blur-lg bg-white/80 border-b border-slate-200/50 shadow-sm">
-      <nav aria-label="Main navigation">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 md:h-20">
           <Link href="/" className="flex items-center space-x-2">
             <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0">
@@ -75,18 +73,16 @@ const Navbar = () => {
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="flex items-center gap-2.5 bg-slate-100 hover:bg-slate-200 text-slate-900 px-5 py-2 rounded-full text-sm font-bold border border-slate-200 transition-all active:scale-95 group"
                   >
-                  <div className="w-6 h-6 rounded-full bg-green-700 flex items-center justify-center text-[10px] text-white">
-                    {userName?.charAt(0) || "U"}
-                  </div>
-                  <span>{userName}</span>
-                  <svg className={`w-4 h-4 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                    <div className="w-6 h-6 rounded-full bg-green-700 flex items-center justify-center text-[10px] text-white">
+                      {userName?.charAt(0) || "U"}
+                    </div>
+                    <span>{userName}</span>
+                    <svg className={`w-4 h-4 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
 
-                {isDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-0" onClick={() => setIsDropdownOpen(false)} />
+                  {isDropdownOpen && (
                     <div className="absolute right-0 mt-3 w-56 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl py-2 z-10 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
                       <div className="px-4 py-3 border-b border-slate-100 mb-1">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Account</p>
@@ -97,17 +93,17 @@ const Navbar = () => {
                         onClick={() => setIsDropdownOpen(false)}
                         className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-green-50 hover:text-green-800 transition-colors"
                       >
-                        📊 View Dashboard
+                        View Dashboard
                       </Link>
                       <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 w-full px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors text-left"
                       >
-                        🚪 Logout
+                        Logout
                       </button>
                     </div>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
             ) : (
               <div className="flex items-center space-x-4">
@@ -135,7 +131,6 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden py-6 space-y-2 border-t border-slate-100 animate-in slide-in-from-top-4 duration-300">
             <Link href="/" className="block text-slate-700 hover:text-green-700 transition-colors font-bold px-4 py-3 rounded-2xl hover:bg-slate-50">
@@ -182,10 +177,7 @@ const Navbar = () => {
             )}
           </div>
         )}
-      </div>
-    </nav>
+      </nav>
     </header>
   );
-};
-
-export default Navbar;
+}

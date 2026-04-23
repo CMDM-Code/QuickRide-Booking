@@ -9,7 +9,7 @@ import {
 } from "@/lib/notification-service";
 import { Notification } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
-import { Bell, Calendar, MessageSquare, Tag, Info, Trash2, CheckCircle, Settings, Inbox, Plus } from "lucide-react";
+import { Bell, Calendar, MessageSquare, Tag, Info, Trash2, CheckCircle, Settings, Inbox, Plus, X } from "lucide-react";
 
 interface AutoNotificationRule {
   id: string;
@@ -305,167 +305,169 @@ export default function NotificationsPage() {
             </div>
           </div>
 
-      {/* Create Form */}
-      {showCreateForm && (
-        <div className="card border-2 border-green-200">
-          <h2 className="text-lg font-bold text-slate-900 mb-1">Create Auto-Notification Rule</h2>
-          <p className="text-sm text-slate-500 mb-6">Define when and how automatic notifications get sent to customers or staff.</p>
-          <form onSubmit={handleCreate} className="space-y-5">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Rule Name</label>
-                <input
-                  type="text"
-                  value={newRule.name}
-                  onChange={(e) => setNewRule({...newRule, name: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
-                  placeholder="e.g. Booking Due Reminder"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Notify Via</label>
-                <select
-                  value={newRule.channel}
-                  onChange={(e) => setNewRule({...newRule, channel: e.target.value as any})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
-                >
-                  <option value="email">📧 Email</option>
-                  <option value="sms">📱 SMS</option>
-                  <option value="push">🔔 Push Notification</option>
-                  <option value="all">📢 All Channels</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Trigger Event</label>
-                <select
-                  value={newRule.event}
-                  onChange={(e) => setNewRule({...newRule, event: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
-                >
-                  {EVENTS.map(evt => (
-                    <option key={evt.value} value={evt.value}>{evt.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">When to Send</label>
-                <select
-                  value={newRule.condition}
-                  onChange={(e) => setNewRule({...newRule, condition: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
-                >
-                  {CONDITIONS.map(cond => (
-                    <option key={cond.value} value={cond.value}>{cond.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Message Template</label>
-              <textarea
-                value={newRule.message}
-                onChange={(e) => setNewRule({...newRule, message: e.target.value})}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none min-h-[100px]"
-                required
-              />
-              <div className="mt-2 flex flex-wrap gap-2">
-                <span className="text-xs text-slate-400 mr-1">Available variables:</span>
-                {TEMPLATE_VARS.map(v => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setNewRule({...newRule, message: newRule.message + ' ' + v})}
-                    className="px-2 py-1 text-[10px] font-mono bg-slate-100 text-slate-600 rounded-lg hover:bg-green-100 hover:text-green-700 transition-colors cursor-pointer"
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button type="button" onClick={() => setShowCreateForm(false)} className="btn-secondary">Cancel</button>
-              <button type="submit" className="btn-primary">Create Rule</button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Rules List */}
-      <div className="card p-0">
-        <div className="p-5 border-b border-slate-200">
-          <h2 className="font-bold text-slate-900">Active Rules</h2>
-        </div>
-        <div className="divide-y divide-slate-100">
-          {rules.map((rule) => (
-            <div key={rule.id} className={`p-5 flex flex-col md:flex-row md:items-center gap-4 transition-opacity ${!rule.active ? 'opacity-50' : ''}`}>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold text-slate-900 truncate">{rule.name}</h3>
-                  <span className={`badge ${getChannelColor(rule.channel)}`}>{rule.channel}</span>
+          {/* Create Form */}
+          {showCreateForm && (
+            <div className="card border-2 border-green-200">
+              <h2 className="text-lg font-bold text-slate-900 mb-1">Create Auto-Notification Rule</h2>
+              <p className="text-sm text-slate-500 mb-6">Define when and how automatic notifications get sent to customers or staff.</p>
+              <form onSubmit={handleCreate} className="space-y-5">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Rule Name</label>
+                    <input
+                      type="text"
+                      value={newRule.name}
+                      onChange={(e) => setNewRule({...newRule, name: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
+                      placeholder="e.g. Booking Due Reminder"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Notify Via</label>
+                    <select
+                      value={newRule.channel}
+                      onChange={(e) => setNewRule({...newRule, channel: e.target.value as any})}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
+                    >
+                      <option value="email">📧 Email</option>
+                      <option value="sms">📱 SMS</option>
+                      <option value="push">🔔 Push Notification</option>
+                      <option value="all">📢 All Channels</option>
+                    </select>
+                  </div>
                 </div>
-                <p className="text-sm text-slate-600">
-                  <span className="font-medium text-slate-800">{getEventLabel(rule.event)}</span>
-                  {' → '}
-                  <span className="text-green-700 font-medium">{getConditionLabel(rule.condition)}</span>
-                </p>
-                <p className="text-xs text-slate-400 mt-1 truncate">{rule.message}</p>
-              </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <button
-                  onClick={() => toggleActive(rule.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    rule.active
-                      ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                  }`}
-                >
-                  {rule.active ? 'Active' : 'Paused'}
-                </button>
-                <button
-                  onClick={() => deleteRule(rule.id)}
-                  className="p-2 text-slate-400 hover:text-red-600 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ))}
-          {rules.length === 0 && (
-            <div className="py-16 text-center">
-              <div className="text-4xl mb-3">🔔</div>
-              <h3 className="text-lg font-bold text-slate-900 mb-1">No Auto-Notification Rules</h3>
-              <p className="text-slate-500 mb-4">Create your first automated notification rule to keep customers informed.</p>
-              <button onClick={() => setShowCreateForm(true)} className="btn-primary">Create First Rule</button>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Trigger Event</label>
+                    <select
+                      value={newRule.event}
+                      onChange={(e) => setNewRule({...newRule, event: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
+                    >
+                      {EVENTS.map(evt => (
+                        <option key={evt.value} value={evt.value}>{evt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">When to Send</label>
+                    <select
+                      value={newRule.condition}
+                      onChange={(e) => setNewRule({...newRule, condition: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
+                    >
+                      {CONDITIONS.map(cond => (
+                        <option key={cond.value} value={cond.value}>{cond.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Message Template</label>
+                  <textarea
+                    value={newRule.message}
+                    onChange={(e) => setNewRule({...newRule, message: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none min-h-[100px]"
+                    required
+                  />
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <span className="text-xs text-slate-400 mr-1">Available variables:</span>
+                    {TEMPLATE_VARS.map(v => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setNewRule({...newRule, message: newRule.message + ' ' + v})}
+                        className="px-2 py-1 text-[10px] font-mono bg-slate-100 text-slate-600 rounded-lg hover:bg-green-100 hover:text-green-700 transition-colors cursor-pointer"
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <button type="button" onClick={() => setShowCreateForm(false)} className="btn-secondary">Cancel</button>
+                  <button type="submit" className="btn-primary">Create Rule</button>
+                </div>
+              </form>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Info Card */}
-      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
-        <div className="flex gap-4">
-          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <span className="text-blue-700 font-bold">ℹ</span>
+          {/* Rules List */}
+          <div className="card p-0">
+            <div className="p-5 border-b border-slate-200">
+              <h2 className="font-bold text-slate-900">Active Rules</h2>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {rules.map((rule) => (
+                <div key={rule.id} className={`p-5 flex flex-col md:flex-row md:items-center gap-4 transition-opacity ${!rule.active ? 'opacity-50' : ''}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-slate-900 truncate">{rule.name}</h3>
+                      <span className={`badge ${getChannelColor(rule.channel)}`}>{rule.channel}</span>
+                    </div>
+                    <p className="text-sm text-slate-600">
+                      <span className="font-medium text-slate-800">{getEventLabel(rule.event)}</span>
+                      {' → '}
+                      <span className="text-green-700 font-medium">{getConditionLabel(rule.condition)}</span>
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1 truncate">{rule.message}</p>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <button
+                      onClick={() => toggleActive(rule.id)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                        rule.active
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      }`}
+                    >
+                      {rule.active ? 'Active' : 'Paused'}
+                    </button>
+                    <button
+                      onClick={() => deleteRule(rule.id)}
+                      className="p-2 text-slate-400 hover:text-red-600 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {rules.length === 0 && (
+                <div className="py-16 text-center">
+                  <div className="text-4xl mb-3">🔔</div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-1">No Auto-Notification Rules</h3>
+                  <p className="text-slate-500 mb-4">Create your first automated notification rule to keep customers informed.</p>
+                  <button onClick={() => setShowCreateForm(true)} className="btn-primary">Create First Rule</button>
+                </div>
+              )}
+            </div>
           </div>
-          <div>
-            <h4 className="font-bold text-blue-900">How Auto-Notifications Work</h4>
-            <p className="text-sm text-blue-800/80 leading-relaxed mt-1">
-              Auto-notification rules automatically send alerts based on conditions you define. For example, you can create a rule that 
-              sends an email to all customers whose booking is due in 1 day. The system checks active bookings periodically and triggers 
-              notifications that match your conditions. Use template variables like <code className="bg-blue-100 px-1 rounded">{'{customer_name}'}</code> to 
-              personalize messages.
-            </p>
+
+          {/* Info Card */}
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+            <div className="flex gap-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <span className="text-blue-700 font-bold">ℹ</span>
+              </div>
+              <div>
+                <h4 className="font-bold text-blue-900">How Auto-Notifications Work</h4>
+                <p className="text-sm text-blue-800/80 leading-relaxed mt-1">
+                  Auto-notification rules automatically send alerts based on conditions you define. For example, you can create a rule that 
+                  sends an email to all customers whose booking is due in 1 day. The system checks active bookings periodically and triggers 
+                  notifications that match your conditions. Use template variables like <code className="bg-blue-100 px-1 rounded">{'{customer_name}'}</code> to 
+                  personalize messages.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
