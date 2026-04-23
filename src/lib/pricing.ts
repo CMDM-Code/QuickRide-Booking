@@ -48,7 +48,7 @@ export function getLocationChain(locationId: string, locationsById: Record<strin
   while (current && !seen.has(current)) {
     seen.add(current);
     chain.push(current);
-    const parent = locationsById[current]?.parentId;
+    const parent: string | undefined = locationsById[current]?.parentId;
     current = parent || undefined;
   }
 
