@@ -4,6 +4,7 @@ export interface PricingBreakdown {
   totalHours: number;
   baseRate24hr: number;
   baseRate12hr: number;
+  baseRateHourly: number;
   blocks24h: number;
   blocks12h: number;
   extraHours: number;
@@ -50,6 +51,7 @@ export function calculateTotalRental(
     totalHours,
     baseRate24hr: rate24hr,
     baseRate12hr: rate12hr,
+    baseRateHourly: hourlyRate,
     blocks24h,
     blocks12h,
     extraHours,

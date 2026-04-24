@@ -2,8 +2,8 @@ import type { Timestamp } from "firebase/firestore";
 
 export type ScheduleScope =
   | { kind: "all" }
-  | { kind: "carType"; carTypeId: string }
-  | { kind: "carModel"; carModelId: string };
+  | { kind: "carType"; carTypeIds: string[] }
+  | { kind: "carModel"; carModelIds: string[] };
 
 export type ScheduleAdjustment =
   | { kind: "flat"; amount: number }
@@ -14,11 +14,13 @@ export type PricingSchedule = {
   name: string;
   enabled: boolean;
   scope: ScheduleScope;
-  locationIds?: string[]; // optional scope to locations (any match)
+  locationIds?: string[]; // any match
+  levelIds?: string[]; // any match
   startAt?: Date | null;
   endAt?: Date | null;
   priority: number;
   createdAt?: Date | null;
+  updatedAt?: Date | null;
   adjustment: ScheduleAdjustment;
 };
 
@@ -31,16 +33,28 @@ function tsToDate(v: any): Date | null {
 }
 
 export function normalizeSchedule(doc: { id: string; [k: string]: any }): PricingSchedule {
+  let scope = doc.scope ?? { kind: "all" };
+  
+  // Migration/Compat: if old single ID fields exist, convert to arrays
+  if (scope.kind === "carType" && scope.carTypeId && !scope.carTypeIds) {
+    scope.carTypeIds = [scope.carTypeId];
+  }
+  if (scope.kind === "carModel" && scope.carModelId && !scope.carModelIds) {
+    scope.carModelIds = [scope.carModelId];
+  }
+
   return {
     id: doc.id,
     name: String(doc.name ?? "Schedule"),
     enabled: Boolean(doc.enabled ?? true),
-    scope: doc.scope ?? { kind: "all" },
+    scope: scope,
     locationIds: Array.isArray(doc.locationIds) ? doc.locationIds : undefined,
+    levelIds: Array.isArray(doc.levelIds) ? doc.levelIds : undefined,
     startAt: tsToDate(doc.startAt),
     endAt: tsToDate(doc.endAt),
     priority: typeof doc.priority === "number" ? doc.priority : 0,
     createdAt: tsToDate(doc.created_at ?? doc.createdAt),
+    updatedAt: tsToDate(doc.updated_at ?? doc.updatedAt),
     adjustment: doc.adjustment ?? { kind: "flat", amount: 0 }
   };
 }
@@ -54,8 +68,8 @@ export function isScheduleActive(s: PricingSchedule, now: Date) {
 
 function scopeMatches(s: PricingSchedule, ctx: { carTypeId: string; carModelId?: string }) {
   if (s.scope.kind === "all") return true;
-  if (s.scope.kind === "carType") return s.scope.carTypeId === ctx.carTypeId;
-  if (s.scope.kind === "carModel") return Boolean(ctx.carModelId) && s.scope.carModelId === ctx.carModelId;
+  if (s.scope.kind === "carType") return s.scope.carTypeIds.includes(ctx.carTypeId);
+  if (s.scope.kind === "carModel") return Boolean(ctx.carModelId) && s.scope.carModelIds.includes(ctx.carModelId!);
   return false;
 }
 
@@ -65,14 +79,21 @@ function locationMatches(s: PricingSchedule, locationIds: string[]) {
   return s.locationIds.some((id) => set.has(id));
 }
 
+function levelMatches(s: PricingSchedule, levelIds: string[]) {
+  if (!s.levelIds || s.levelIds.length === 0) return true;
+  const set = new Set(levelIds);
+  return s.levelIds.some((id) => set.has(id));
+}
+
 export function pickActiveSchedule(
   schedules: PricingSchedule[],
-  ctx: { carTypeId: string; carModelId?: string; locationIds: string[]; now: Date }
+  ctx: { carTypeId: string; carModelId?: string; locationIds: string[]; levelIds?: string[]; now: Date }
 ) {
   const candidates = schedules
     .filter((s) => isScheduleActive(s, ctx.now))
     .filter((s) => scopeMatches(s, { carTypeId: ctx.carTypeId, carModelId: ctx.carModelId }))
-    .filter((s) => locationMatches(s, ctx.locationIds));
+    .filter((s) => locationMatches(s, ctx.locationIds))
+    .filter((s) => levelMatches(s, ctx.levelIds ?? []));
 
   candidates.sort((a, b) => {
     if (b.priority !== a.priority) return b.priority - a.priority;

@@ -9,6 +9,7 @@ export type PricingMeta = {
 
 export type ResolvedLocationRate = {
   matchedLocationId: string;
+  rateHourly: number | null;
   rate12h: number | null;
   rate24h: number | null;
 };
@@ -75,6 +76,7 @@ export function resolveRatesForLocation(
     if (!rate) continue;
     return {
       matchedLocationId: id,
+      rateHourly: rate["hourly"] ?? null,
       rate12h: rate["12h"] ?? null,
       rate24h: rate["24h"] ?? null
     };

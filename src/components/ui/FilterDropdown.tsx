@@ -28,6 +28,7 @@ interface FilterDropdownProps {
 export function FilterDropdown({ filters, onApply, children }: FilterDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [tempFilters, setTempFilters] = useState<ActiveFilters>({});
+  const [filterSearch, setFilterSearch] = useState<Record<string, string>>({});
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -183,7 +184,17 @@ export function FilterDropdown({ filters, onApply, children }: FilterDropdownPro
           </div>
 
           <div className="p-4 space-y-4 max-h-80 overflow-y-auto">
-            {filters.map((filter) => (
+          {filters.map((filter) => {
+              const searchTerm = (filterSearch[filter.key] || '').toLowerCase();
+              const visibleOptions = searchTerm
+                ? filter.options.filter(
+                    (o) =>
+                      o.label.toLowerCase().includes(searchTerm) ||
+                      o.value.toLowerCase().includes(searchTerm)
+                  )
+                : filter.options;
+
+              return (
               <div key={filter.key}>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
                   {filter.label}
@@ -196,14 +207,15 @@ export function FilterDropdown({ filters, onApply, children }: FilterDropdownPro
                   <input
                     type="text"
                     placeholder={`Search ${filter.label.toLowerCase()}...`}
+                    value={filterSearch[filter.key] || ''}
                     className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
                     onChange={(e) => {
-                      // Could implement live filtering here
+                      setFilterSearch((prev) => ({ ...prev, [filter.key]: e.target.value }));
                     }}
                   />
                 </div>
                 <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
-                  {filter.options.map((option) => {
+                  {visibleOptions.map((option) => {
                     const isSelected = filter.multiSelect
                       ? ((tempFilters[filter.key] as string[]) || []).includes(option.value)
                       : tempFilters[filter.key] === option.value;
@@ -237,12 +249,13 @@ export function FilterDropdown({ filters, onApply, children }: FilterDropdownPro
                       </label>
                     );
                   })}
-                  {filter.options.length === 0 && (
-                    <p className="text-xs text-slate-400 py-2">No options available</p>
+                  {visibleOptions.length === 0 && (
+                    <p className="text-xs text-slate-400 py-2">No options match your search</p>
                   )}
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
 
           <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-3">

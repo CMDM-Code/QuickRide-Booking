@@ -57,7 +57,10 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-slate-50">
       <AdminSidebar />
-      <main className="lg:ml-72 min-h-screen transition-all duration-300 flex flex-col">
+      <main 
+        className="min-h-screen transition-all duration-300 flex flex-col"
+        style={{ marginLeft: 'var(--sidebar-width, 288px)' }}
+      >
         {/* Top Header */}
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200/50 flex items-center justify-between px-8 sticky top-0 z-30">
           <div>

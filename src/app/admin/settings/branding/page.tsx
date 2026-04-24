@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useBranding } from "@/components/providers/BrandingProvider";
 import { updateBrandingConfig, uploadLogo } from "@/lib/branding-service";
 import { BrandingConfig } from "@/lib/types";
+import { ColorWheel } from "@/components/ui/ColorWheel";
 import { 
   Palette, 
   Upload, 
@@ -95,13 +96,13 @@ export default function BrandingSettingsPage() {
       <div className="grid md:grid-cols-2 gap-8">
         {/* Visual Identity */}
         <div className="space-y-6">
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-8">
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-8 h-full">
             <h2 className="text-xl font-black text-slate-900 flex items-center gap-3">
               <Type className="w-6 h-6 text-blue-600" />
               Visual Identity
             </h2>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <label className="block">
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">System Name</span>
                 <input
@@ -116,7 +117,7 @@ export default function BrandingSettingsPage() {
               <div>
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">System Logo</span>
                 <div className="mt-4 flex items-center gap-6">
-                  <div className="w-24 h-24 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden relative group">
+                  <div className="w-24 h-24 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden relative group shrink-0">
                     <img 
                       src={config.logo_url} 
                       alt="Preview" 
@@ -129,9 +130,9 @@ export default function BrandingSettingsPage() {
                     )}
                   </div>
                   <label className="flex-1">
-                    <div className="cursor-pointer bg-slate-50 hover:bg-slate-100 border border-slate-200 px-6 py-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all">
+                    <div className="cursor-pointer bg-slate-50 hover:bg-slate-100 border border-slate-200 px-6 py-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all h-24">
                       <Upload className="w-5 h-5 text-slate-400" />
-                      <span className="text-xs font-bold text-slate-600">Click to upload new logo</span>
+                      <span className="text-xs font-bold text-slate-600">Upload Logo</span>
                       <input 
                         type="file" 
                         className="hidden" 
@@ -149,64 +150,70 @@ export default function BrandingSettingsPage() {
 
         {/* Theme & Colors */}
         <div className="space-y-6">
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-8">
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-8 h-full">
             <h2 className="text-xl font-black text-slate-900 flex items-center gap-3">
               <Palette className="w-6 h-6 text-purple-600" />
               Theme & Colors
             </h2>
 
-            <div className="grid grid-cols-2 gap-6">
-              <label className="block">
-                <span className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Primary Brand</span>
-                <div className="mt-2 flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={config.theme_colors.primary}
-                    onChange={(e) => updateColor('primary', e.target.value)}
-                    className="w-12 h-12 rounded-xl border-0 p-0 overflow-hidden cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={config.theme_colors.primary}
-                    onChange={(e) => updateColor('primary', e.target.value)}
-                    className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 font-mono text-xs font-bold text-slate-600 outline-none"
-                  />
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <span className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Primary Brand Color</span>
+                <div className="flex items-start gap-8">
+                  <div className="w-32 h-32 shrink-0">
+                    <ColorWheel 
+                      color={config.theme_colors.primary} 
+                      onChange={(c) => updateColor('primary', c)} 
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                     <div className="w-full h-12 rounded-xl shadow-inner border border-slate-100" style={{ backgroundColor: config.theme_colors.primary }}></div>
+                     <input
+                        type="text"
+                        value={config.theme_colors.primary.toUpperCase()}
+                        onChange={(e) => updateColor('primary', e.target.value)}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-slate-50 font-mono text-sm font-bold text-slate-600 outline-none"
+                      />
+                  </div>
                 </div>
-              </label>
+              </div>
 
-              <label className="block">
-                <span className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Secondary Brand</span>
-                <div className="mt-2 flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={config.theme_colors.secondary}
-                    onChange={(e) => updateColor('secondary', e.target.value)}
-                    className="w-12 h-12 rounded-xl border-0 p-0 overflow-hidden cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={config.theme_colors.secondary}
-                    onChange={(e) => updateColor('secondary', e.target.value)}
-                    className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 font-mono text-xs font-bold text-slate-600 outline-none"
-                  />
+              <div className="space-y-4">
+                <span className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Secondary Brand Color</span>
+                <div className="flex items-start gap-8">
+                  <div className="w-32 h-32 shrink-0">
+                    <ColorWheel 
+                      color={config.theme_colors.secondary} 
+                      onChange={(c) => updateColor('secondary', c)} 
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                     <div className="w-full h-12 rounded-xl shadow-inner border border-slate-100" style={{ backgroundColor: config.theme_colors.secondary }}></div>
+                     <input
+                        type="text"
+                        value={config.theme_colors.secondary.toUpperCase()}
+                        onChange={(e) => updateColor('secondary', e.target.value)}
+                        className="w-full px-4 py-2 rounded-xl border border-slate-200 bg-slate-50 font-mono text-sm font-bold text-slate-600 outline-none"
+                      />
+                  </div>
                 </div>
-              </label>
+              </div>
             </div>
 
             <div className="pt-6 border-t border-slate-50">
-              <span className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Live Preview</span>
-              <div className="mt-4 space-y-3">
+              <span className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">UI Preview</span>
+              <div className="mt-4 flex gap-3">
                 <button 
-                  className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-[10px] text-white shadow-lg transition-all"
+                  className="flex-1 py-3 rounded-xl font-black uppercase tracking-widest text-[9px] text-white shadow-lg transition-all"
                   style={{ backgroundColor: config.theme_colors.primary }}
                 >
-                  Primary Action Preview
+                  Primary Action
                 </button>
                 <button 
-                  className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-[10px] text-white shadow-lg transition-all"
+                  className="flex-1 py-3 rounded-xl font-black uppercase tracking-widest text-[9px] text-white shadow-lg transition-all"
                   style={{ backgroundColor: config.theme_colors.secondary }}
                 >
-                  Secondary Action Preview
+                  Secondary Action
                 </button>
               </div>
             </div>

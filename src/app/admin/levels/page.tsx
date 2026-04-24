@@ -24,20 +24,29 @@ export default function LevelManagementPage() {
   const [formOrder, setFormOrder] = useState(0);
   const [search, setSearch] = useState("");
 
+  const [locations, setLocations] = useState<any[]>([]);
+
   async function refresh() {
     setLoading(true);
     if (!db) {
       setLevels([]);
+      setLocations([]);
       setLoading(false);
       return;
     }
     try {
-      const snap = await getDocs(query(collection(db, "levels"), orderBy("order", "asc")));
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as LocationLevel));
-      setLevels(data);
+      const [levelsSnap, locsSnap] = await Promise.all([
+        getDocs(query(collection(db, "levels"), orderBy("order", "asc"))),
+        getDocs(collection(db, "locations"))
+      ]);
+      const levelsData = levelsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as LocationLevel));
+      const locsData = locsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setLevels(levelsData);
+      setLocations(locsData);
     } catch (e) {
       console.error(e);
       setLevels([]);
+      setLocations([]);
     } finally {
       setLoading(false);
     }
@@ -101,7 +110,13 @@ export default function LevelManagementPage() {
   }
 
   async function deleteLevel(id: string) {
-    if (!confirm("Delete this level? Locations using this level will become unassigned.")) return;
+    const usageCount = locations.filter(l => l.levelId === id).length;
+    let confirmMsg = "Delete this level?";
+    if (usageCount > 0) {
+      confirmMsg = `This level is currently used by ${usageCount} location(s). Deleting it will leave them unassigned. Proceed?`;
+    }
+
+    if (!confirm(confirmMsg)) return;
     if (!db) return;
     try {
       await deleteDoc(doc(db, "levels", id));
@@ -235,39 +250,41 @@ export default function LevelManagementPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredLevels.map((level, index) => (
-                <tr key={level.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-700">{level.order}</span>
-                      <div className="flex flex-col gap-1">
-                        <button
-                          onClick={() => moveUp(index)}
-                          disabled={index === 0}
-                          className="text-slate-400 hover:text-slate-700 disabled:opacity-30 text-xs"
-                          title="Move up"
-                        >
-                          ▲
-                        </button>
-                        <button
-                          onClick={() => moveDown(index)}
-                          disabled={index === levels.length - 1}
-                          className="text-slate-400 hover:text-slate-700 disabled:opacity-30 text-xs"
-                          title="Move down"
-                        >
-                          ▼
-                        </button>
+              {filteredLevels.map((level, index) => {
+                const usageCount = locations.filter(l => l.levelId === level.id).length;
+                return (
+                  <tr key={level.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-700">{level.order}</span>
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => moveUp(index)}
+                            disabled={index === 0}
+                            className="text-slate-400 hover:text-slate-700 disabled:opacity-30 text-xs"
+                            title="Move up"
+                          >
+                            ▲
+                          </button>
+                          <button
+                            onClick={() => moveDown(index)}
+                            disabled={index === levels.length - 1}
+                            className="text-slate-400 hover:text-slate-700 disabled:opacity-30 text-xs"
+                            title="Move down"
+                          >
+                            ▼
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="font-semibold text-slate-900">{level.name}</span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
-                    <span className="bg-slate-100 px-2 py-1 rounded text-xs font-medium">
-                      {levels.filter(l => l.id === level.id).length || 0}
-                    </span>
-                  </td>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="font-semibold text-slate-900">{level.name}</span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${usageCount > 0 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}>
+                        {usageCount} location(s)
+                      </span>
+                    </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button

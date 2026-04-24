@@ -1,80 +1,61 @@
 'use client';
 import { useState, useEffect } from "react";
 import { ColorWheel } from "@/components/ui/ColorWheel";
-
-interface SystemSettings {
-  companyName: string;
-  supportEmail: string;
-  supportPhone: string;
-  currency: string;
-  timezone: string;
-  taxRate: number;
-  minimumRentalHours: number;
-  lateFeeMethod: 'hourly_rate' | 'flat_amount' | 'percentage';
-  lateFeeHourlyNote: string;
-  lateFeeFlat: number;
-  lateFeePercent: number;
-  sessionTimeoutMinutes: number;
-  pricingBehaviorMode: 'locked' | 'recalculated';
-  // Branding Theme Colors
-  primaryColor: string;
-  secondaryColor: string;
-  accentColor: string;
-  sidebarColor: string;
-  headerColor: string;
-}
-
-const DEFAULT_SETTINGS: SystemSettings = {
-  companyName: 'QuickRide Booking',
-  supportEmail: 'support@quickridebooking.com',
-  supportPhone: '+63 XXX XXX XXXX',
-  currency: 'PHP',
-  timezone: 'Asia/Manila',
-  taxRate: 12,
-  minimumRentalHours: 12,
-  lateFeeMethod: 'hourly_rate',
-  lateFeeHourlyNote: 'Charges +1hr worth of rental cost per hour late, rounded up.',
-  lateFeeFlat: 500,
-  lateFeePercent: 15,
-  sessionTimeoutMinutes: 120,
-  pricingBehaviorMode: 'locked',
-  // Branding Theme Colors (default green theme)
-  primaryColor: '#10b981',
-  secondaryColor: '#3b82f6',
-  accentColor: '#f59e0b',
-  sidebarColor: '#1e293b',
-  headerColor: '#ffffff',
-};
-
-const getSettings = (): SystemSettings => {
-  try {
-    const saved = localStorage.getItem('quickride_system_settings');
-    if (saved) return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
-  } catch {}
-  return DEFAULT_SETTINGS;
-};
-
-const saveSettings = (settings: SystemSettings) => {
-  localStorage.setItem('quickride_system_settings', JSON.stringify(settings));
-};
+import {
+  SystemSettings,
+  getDefaultSettings,
+  fetchSettingsFromFirestore,
+  saveSettings
+} from "@/lib/settings-service";
 
 export default function SystemSettingsPage() {
-  const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<SystemSettings>(getDefaultSettings());
+  const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setSettings(getSettings());
+    async function load() {
+      setLoading(true);
+      try {
+        const s = await fetchSettingsFromFirestore();
+        setSettings(s);
+      } catch {
+        // Falls back to defaults automatically
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
   }, []);
 
-  const handleSave = () => {
-    saveSettings(settings);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await saveSettings(settings);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e: any) {
+      setError("Failed to save settings to cloud: " + (e?.message || "Unknown error"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const update = (field: keyof SystemSettings, value: any) => {
     setSettings(prev => ({ ...prev, [field]: value }));
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
+        <p className="text-slate-500 font-medium">Loading system settings...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -83,16 +64,24 @@ export default function SystemSettingsPage() {
           <h1 className="text-3xl font-bold text-slate-900">System Settings</h1>
           <p className="text-slate-600 mt-1">Configure global application settings</p>
         </div>
-        <button
-          onClick={handleSave}
-          className={`px-6 py-3 rounded-xl font-bold transition-all shadow-lg ${
-            saved
-              ? 'bg-green-600 text-white scale-105'
-              : 'bg-green-700 hover:bg-green-800 text-white hover:scale-105'
-          }`}
-        >
-          {saved ? '✓ Saved!' : 'Save Settings'}
-        </button>
+        <div className="flex items-center gap-3">
+          {error && (
+            <span className="text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">{error}</span>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`px-6 py-3 rounded-xl font-bold transition-all shadow-lg ${
+              saved
+                ? 'bg-green-600 text-white scale-105'
+                : saving
+                ? 'bg-slate-400 text-white cursor-not-allowed'
+                : 'bg-green-700 hover:bg-green-800 text-white hover:scale-105'
+            }`}
+          >
+            {saved ? '✓ Saved!' : saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
       </div>
 
       {/* Company Information */}

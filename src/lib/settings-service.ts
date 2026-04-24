@@ -1,6 +1,10 @@
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from './firebase';
+
 export type PricingBehaviorMode = 'locked' | 'recalculated';
 
 const SYSTEM_SETTINGS_KEY = 'quickride_system_settings';
+const SETTINGS_DOC_PATH = 'system_config/settings';
 
 export interface SystemSettings {
   companyName: string;
@@ -22,37 +26,6 @@ export interface SystemSettings {
   accentColor: string;
   sidebarColor: string;
   headerColor: string;
-}
-
-export function getSystemSettings(): SystemSettings {
-  try {
-    const saved = localStorage.getItem(SYSTEM_SETTINGS_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-        companyName: parsed.companyName || 'QuickRide Booking',
-        supportEmail: parsed.supportEmail || 'support@quickridebooking.com',
-        supportPhone: parsed.supportPhone || '+63 XXX XXX XXXX',
-        currency: parsed.currency || 'PHP',
-        timezone: parsed.timezone || 'Asia/Manila',
-        taxRate: typeof parsed.taxRate === 'number' ? parsed.taxRate : 12,
-        minimumRentalHours: typeof parsed.minimumRentalHours === 'number' ? parsed.minimumRentalHours : 12,
-        lateFeeMethod: parsed.lateFeeMethod || 'hourly_rate',
-        lateFeeHourlyNote: parsed.lateFeeHourlyNote || 'Charges +1hr worth of rental cost per hour late, rounded up.',
-        lateFeeFlat: typeof parsed.lateFeeFlat === 'number' ? parsed.lateFeeFlat : 500,
-        lateFeePercent: typeof parsed.lateFeePercent === 'number' ? parsed.lateFeePercent : 15,
-        sessionTimeoutMinutes: typeof parsed.sessionTimeoutMinutes === 'number' ? parsed.sessionTimeoutMinutes : 120,
-        pricingBehaviorMode: parsed.pricingBehaviorMode || 'locked',
-        // Theme Colors
-        primaryColor: parsed.primaryColor || '#10b981',
-        secondaryColor: parsed.secondaryColor || '#3b82f6',
-        accentColor: parsed.accentColor || '#f59e0b',
-        sidebarColor: parsed.sidebarColor || '#1e293b',
-        headerColor: parsed.headerColor || '#ffffff',
-      };
-    }
-  } catch {}
-  return getDefaultSettings();
 }
 
 export function getDefaultSettings(): SystemSettings {
@@ -77,6 +50,73 @@ export function getDefaultSettings(): SystemSettings {
     sidebarColor: '#1e293b',
     headerColor: '#ffffff',
   };
+}
+
+/** Read from localStorage cache */
+function getLocalSettings(): SystemSettings {
+  try {
+    const saved = localStorage.getItem(SYSTEM_SETTINGS_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...getDefaultSettings(), ...parsed };
+    }
+  } catch {}
+  return getDefaultSettings();
+}
+
+/** Write to localStorage cache */
+function setLocalSettings(settings: SystemSettings): void {
+  try {
+    localStorage.setItem(SYSTEM_SETTINGS_KEY, JSON.stringify(settings));
+  } catch {}
+}
+
+/** Synchronous getter — returns cached/local settings immediately */
+export function getSystemSettings(): SystemSettings {
+  return getLocalSettings();
+}
+
+/** Async fetch from Firestore, updates local cache */
+export async function fetchSettingsFromFirestore(): Promise<SystemSettings> {
+  if (!db) return getLocalSettings();
+
+  try {
+    const docRef = doc(db, SETTINGS_DOC_PATH);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      const settings: SystemSettings = {
+        ...getDefaultSettings(),
+        ...data,
+      };
+      // Cache to localStorage for offline resilience
+      setLocalSettings(settings);
+      return settings;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch settings from Firestore, using local cache:', e);
+  }
+
+  return getLocalSettings();
+}
+
+/** Save settings to both Firestore and localStorage */
+export async function saveSettings(settings: SystemSettings): Promise<void> {
+  // Always cache locally
+  setLocalSettings(settings);
+
+  if (!db) return;
+
+  try {
+    const docRef = doc(db, SETTINGS_DOC_PATH);
+    await setDoc(docRef, {
+      ...settings,
+      updated_at: serverTimestamp(),
+    }, { merge: true });
+  } catch (e) {
+    console.error('Failed to save settings to Firestore:', e);
+    throw e;
+  }
 }
 
 export function getPricingBehaviorMode(): PricingBehaviorMode {
