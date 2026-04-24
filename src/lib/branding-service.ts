@@ -69,7 +69,7 @@ export async function uploadLogo(file: File): Promise<string> {
  */
 export const DEFAULT_BRANDING_CONFIG: BrandingConfig = {
   system_name: "QuickRide Booking",
-  logo_url: "/assets/images/quickride_logo.png",
+  logo_url: "/logo.png",
   theme_colors: {
     primary: "#15803d", // green-700
     secondary: "#f59e0b" // amber-500

@@ -56,7 +56,7 @@ const StaffSidebar = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out 
+        className={`fixed top-20 bottom-0 left-0 z-40 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out 
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >

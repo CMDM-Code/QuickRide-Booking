@@ -143,7 +143,7 @@ const AdminSidebar = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 bg-slate-950 shadow-2xl transform transition-all duration-300 ease-in-out border-r border-white/5
+        className={`fixed top-20 bottom-0 left-0 z-40 bg-slate-950 shadow-2xl transform transition-all duration-300 ease-in-out border-r border-white/5
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
           ${isCollapsed ? "w-20" : "w-72"}
         `}
