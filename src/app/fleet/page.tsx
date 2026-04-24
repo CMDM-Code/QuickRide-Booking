@@ -44,7 +44,7 @@ export default function FleetPage() {
           Promise.all([
             getDocs(collection(db, 'vehicles')),
             getDocs(collection(db, 'car_types')),
-            getDocs(collection(db, 'pricing_rates')),
+            getDocs(collection(db, 'pricing_sheets')),
             getDocs(collection(db, 'locations'))
           ]), 
           5000
@@ -62,14 +62,31 @@ export default function FleetPage() {
             car_type: carTypesMap[doc.data().car_type_id] || { name: 'Unknown', driver_only: false }
           }));
 
-          const rt = ratesSnap.docs.map((doc: any) => ({
-            id: doc.id,
-            ...doc.data(),
-            location: locationsMap[doc.data().location_id]
-          }));
+          const rt: any[] = [];
+          ratesSnap.docs.forEach((doc: any) => {
+            const carTypeId = doc.id;
+            const sheetData = doc.data();
+            const sheetRates = sheetData.rates || {};
+            
+            for (const locId in sheetRates) {
+              if (locId !== 'default' && locationsMap[locId]) {
+                const r = sheetRates[locId];
+                if (r.rate_12hr || r.rate_24hr) {
+                  rt.push({
+                    id: `${carTypeId}_${locId}`,
+                    car_type_id: carTypeId,
+                    location_id: locId,
+                    location: locationsMap[locId],
+                    rate_12hr: r.rate_12hr,
+                    rate_24hr: r.rate_24hr
+                  });
+                }
+              }
+            }
+          });
 
           setVehicles(vehs);
-          setRates(rt as any);
+          setRates(rt);
 
           // Fetch bookings separately for the timeline
           const today = startOfDay(new Date());

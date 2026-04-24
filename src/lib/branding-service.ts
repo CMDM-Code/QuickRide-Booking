@@ -29,7 +29,7 @@ export async function fetchBrandingConfig(): Promise<BrandingConfig> {
     // Default fallback
     return DEFAULT_BRANDING_CONFIG;
   } catch (error) {
-    console.error("Error fetching branding config:", error);
+    console.warn("⚠️ Fetching branding config failed (using default fallback). Ensure Firebase security rules allow read access.");
     return DEFAULT_BRANDING_CONFIG;
   }
 }

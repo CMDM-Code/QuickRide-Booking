@@ -1,10 +1,13 @@
 'use client';
 import { useEffect, useState } from "react";
 import { fetchGlobalStats, fetchRecentActivity, DashboardStats } from "@/lib/dashboard-utils";
+import { subscribeToNotifications } from "@/lib/notification-service";
+import { Notification } from "@/lib/types";
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,6 +22,13 @@ export default function AdminDashboardPage() {
       setLoading(false);
     }
     loadData();
+
+    // Subscribe to admin notifications
+    const unsubscribe = subscribeToNotifications('admin', (data) => {
+      setNotifications(data);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   if (loading) {
@@ -90,6 +100,31 @@ export default function AdminDashboardPage() {
               ))}
               {activities.length === 0 && (
                 <p className="text-center py-10 text-slate-400 italic">No recent activity detected.</p>
+              )}
+            </div>
+          </div>
+          <div className="card">
+            <h2 className="text-lg font-bold text-slate-900 mb-4 uppercase tracking-widest text-xs opacity-50 flex items-center justify-between">
+              <span>System Notifications</span>
+              <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px]">{notifications.filter(n => !n.read).length} New</span>
+            </h2>
+            <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+              {notifications.map((notif, i) => (
+                <div key={notif.id || i} className={`p-4 rounded-xl border transition-all ${notif.read ? 'bg-white border-slate-100' : 'bg-blue-50 border-blue-100 shadow-sm'}`}>
+                  <div className="flex justify-between items-start mb-1">
+                    <p className={`font-bold text-sm ${notif.read ? 'text-slate-700' : 'text-blue-900'}`}>{notif.title}</p>
+                    <span className="text-[10px] text-slate-400 whitespace-nowrap ml-2">
+                      {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className={`text-xs ${notif.read ? 'text-slate-500' : 'text-blue-700/80'}`}>{notif.message}</p>
+                </div>
+              ))}
+              {notifications.length === 0 && (
+                <div className="text-center py-10">
+                  <div className="text-4xl mb-3 opacity-50">📭</div>
+                  <p className="text-slate-400 italic text-sm">No new notifications</p>
+                </div>
               )}
             </div>
           </div>

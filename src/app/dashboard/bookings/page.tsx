@@ -1,5 +1,7 @@
 'use client';
 
+import Link from "next/link";
+
 import { useState, useEffect } from "react";
 import { authClient } from "@/lib/auth-client";
 import { db } from "@/lib/firebase";
@@ -298,6 +300,14 @@ export default function BookingsPage() {
 
                     {(booking.status === 'pending' || booking.status === 'approved') && booking.user_id === userId && (
                       <div className="flex gap-2">
+                        {booking.status === 'approved' && (
+                          <Link
+                            href={`/dashboard/payments?booking=${booking.id}`}
+                            className="text-green-600 hover:text-green-800 text-sm font-bold bg-green-50 hover:bg-green-100 px-4 py-2 rounded-xl transition-colors flex items-center gap-2"
+                          >
+                            Pay via GCash
+                          </Link>
+                        )}
                         <button
                           onClick={() => setEditingBooking(booking)}
                           className="text-amber-600 hover:text-amber-800 text-sm font-bold bg-amber-50 hover:bg-amber-100 px-4 py-2 rounded-xl transition-colors"

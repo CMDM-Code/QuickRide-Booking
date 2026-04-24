@@ -73,7 +73,7 @@ export default function ServicesPage() {
            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -ml-24 -mb-24"></div>
            <h2 className="text-3xl font-black mb-4 relative z-10">Need a custom mobility solution?</h2>
            <p className="text-green-100 mb-8 max-w-xl mx-auto relative z-10">Our deployment team can architect a specific transportation plan tailored precisely to your logistical requirements.</p>
-           <Link href="/fleet" className="relative z-10 inline-block bg-white text-green-900 px-8 py-4 rounded-xl font-bold hover:bg-slate-50 transition-colors">
+           <Link href="/dashboard/support" className="relative z-10 inline-block bg-white text-green-900 px-8 py-4 rounded-xl font-bold hover:bg-slate-50 transition-colors">
                Contact Dispatch Team
            </Link>
         </div>

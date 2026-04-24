@@ -29,10 +29,8 @@ export default function DashboardLayout({
       <main className="flex-1 lg:ml-72 min-h-screen flex flex-col transition-all duration-300">
         {/* Dashboard Header - Premium Sticky Style */}
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200/50 flex items-center justify-between px-8 sticky top-0 z-30">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400">
-            <span>Dashboard</span>
-            <ChevronRight size={12} className="text-slate-300" />
-            <span className="text-slate-900">{pageTitle}</span>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">System Overview</p>
           </div>
           
           <div className="flex items-center gap-6">
@@ -43,7 +41,7 @@ export default function DashboardLayout({
                 <p className="text-xs font-black text-slate-900 leading-none">{userName}</p>
                 <p className="text-[10px] font-bold text-green-700 uppercase tracking-wider mt-1">Verified Client</p>
               </div>
-              <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg">
+              <div className="w-10 h-10 bg-slate-950 rounded-xl flex items-center justify-center text-white shadow-lg">
                 <User className="w-5 h-5" />
               </div>
             </div>
