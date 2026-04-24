@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from "react";
-import { ColorWheel } from "@/components/ui/ColorWheel";
+import { ColorPicker } from "@/components/ui/ColorPicker";
 import {
   SystemSettings,
   getDefaultSettings,
@@ -233,7 +233,7 @@ export default function SystemSettingsPage() {
               <label className="text-sm font-bold text-slate-700">Primary Color</label>
             </div>
             <p className="text-xs text-slate-500 mb-3">Main brand color for buttons, links, and key UI elements.</p>
-            <ColorWheel
+            <ColorPicker
               value={settings.primaryColor}
               onChange={(color) => update('primaryColor', color)}
               size={180}
@@ -250,7 +250,7 @@ export default function SystemSettingsPage() {
               <label className="text-sm font-bold text-slate-700">Secondary Color</label>
             </div>
             <p className="text-xs text-slate-500 mb-3">Supporting color for secondary actions and highlights.</p>
-            <ColorWheel
+            <ColorPicker
               value={settings.secondaryColor}
               onChange={(color) => update('secondaryColor', color)}
               size={180}
@@ -267,7 +267,7 @@ export default function SystemSettingsPage() {
               <label className="text-sm font-bold text-slate-700">Accent Color</label>
             </div>
             <p className="text-xs text-slate-500 mb-3">Attention-grabbing color for notifications and warnings.</p>
-            <ColorWheel
+            <ColorPicker
               value={settings.accentColor}
               onChange={(color) => update('accentColor', color)}
               size={180}
@@ -284,7 +284,7 @@ export default function SystemSettingsPage() {
               <label className="text-sm font-bold text-slate-700">Sidebar Color</label>
             </div>
             <p className="text-xs text-slate-500 mb-3">Background color for the admin sidebar navigation.</p>
-            <ColorWheel
+            <ColorPicker
               value={settings.sidebarColor}
               onChange={(color) => update('sidebarColor', color)}
               size={180}
@@ -301,7 +301,7 @@ export default function SystemSettingsPage() {
               <label className="text-sm font-bold text-slate-700">Header Color</label>
             </div>
             <p className="text-xs text-slate-500 mb-3">Background color for the page header area.</p>
-            <ColorWheel
+            <ColorPicker
               value={settings.headerColor}
               onChange={(color) => update('headerColor', color)}
               size={180}

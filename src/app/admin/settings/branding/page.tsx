@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useBranding } from "@/components/providers/BrandingProvider";
 import { updateBrandingConfig, uploadLogo } from "@/lib/branding-service";
 import { BrandingConfig } from "@/lib/types";
-import { ColorWheel } from "@/components/ui/ColorWheel";
+import { ColorPicker } from "@/components/ui/ColorPicker";
 import { 
   Palette, 
   Upload, 
@@ -174,7 +174,7 @@ export default function BrandingSettingsPage() {
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Primary Brand Color</span>
                 <div className="flex items-start gap-8">
                   <div className="w-32 h-32 shrink-0">
-                    <ColorWheel 
+                    <ColorPicker 
                       value={config.theme_colors.primary} 
                       onChange={(c) => updateColor('primary', c)} 
                       size={128}
@@ -196,7 +196,7 @@ export default function BrandingSettingsPage() {
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Secondary Brand Color</span>
                 <div className="flex items-start gap-8">
                   <div className="w-32 h-32 shrink-0">
-                    <ColorWheel 
+                    <ColorPicker 
                       value={config.theme_colors.secondary} 
                       onChange={(c) => updateColor('secondary', c)} 
                       size={128}

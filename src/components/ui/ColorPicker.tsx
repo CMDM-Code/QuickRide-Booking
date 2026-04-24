@@ -2,13 +2,13 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 
-interface ColorWheelProps {
+interface ColorPickerProps {
   value: string;
   onChange: (color: string) => void;
   size?: number;
 }
 
-export function ColorWheel({ value, onChange, size = 200 }: ColorWheelProps) {
+export function ColorPicker({ value, onChange, size = 200 }: ColorPickerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
