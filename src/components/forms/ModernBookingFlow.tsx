@@ -128,12 +128,20 @@ function getMockTravelTime(): string {
   return times[Math.floor(Math.random() * times.length)];
 }
 
-function calcPrice(car: Vehicle, details: BookingDetails, destinations: Destination[], rates: PricingRate[]): {
+function calcPrice(
+  car: Vehicle, 
+  details: BookingDetails, 
+  destinations: Destination[], 
+  rates: PricingRate[],
+  pricingSheets: any[] = [],
+  locations: any[] = []
+): {
   baseCost: number;
   driverFee: number;
   routeFee: number;
   total: number;
   days: number;
+  ratePerDay: number;
 } {
   const startMs = details.startDate && details.startTime 
     ? new Date(`${details.startDate}T${details.startTime}`).getTime() 
@@ -145,14 +153,52 @@ function calcPrice(car: Vehicle, details: BookingDetails, destinations: Destinat
   const diffHours = (endMs - startMs) / (1000 * 60 * 60);
   const days = Math.max(1, Math.ceil(diffHours / 24));
   
-  const rate = rates.find(r => r.car_type_id === car.car_type_id);
-  const ratePerDay = rate ? (rate.rate_24hr || car.pricePerDay || 4000) : (car.pricePerDay || 4000);
+  // Find location IDs for the destinations
+  const locationIds = destinations.map(d => {
+    // Try to find by city name first, then province
+    const loc = locations.find(l => 
+      l.name?.toLowerCase().includes(d.city?.toLowerCase()) || 
+      l.name?.toLowerCase().includes(d.province?.toLowerCase())
+    );
+    return loc?.id;
+  }).filter(Boolean);
+
+  let ratePerDay = 0;
+  
+  // 1. Try Pricing Sheets (Regional Pricing)
+  if (car.car_type_id && pricingSheets.length > 0) {
+    const sheet = pricingSheets.find(s => s.id === car.car_type_id);
+    if (sheet && sheet.rates) {
+      const sheetRates = sheet.rates;
+      
+      // If we have locations, find the highest rate among them
+      if (locationIds.length > 0) {
+        let maxRate = 0;
+        for (const locId of locationIds) {
+          const locRate = sheetRates[locId]?.rate_24hr || sheetRates[locId]?.["24h"];
+          if (locRate && locRate > maxRate) maxRate = locRate;
+        }
+        if (maxRate > 0) ratePerDay = maxRate;
+      }
+      
+      // Fallback to default in sheet if no location match
+      if (ratePerDay === 0) {
+        ratePerDay = sheetRates["default"]?.rate_24hr || sheetRates["default"]?.["24h"] || 0;
+      }
+    }
+  }
+
+  // 2. Fallback to PricingRates (Legacy/Flattened)
+  if (ratePerDay === 0) {
+    const rate = rates.find(r => r.car_type_id === car.car_type_id);
+    ratePerDay = rate ? (rate.rate_24hr || car.pricePerDay || 4000) : (car.pricePerDay || 4000);
+  }
   
   const baseCost = ratePerDay * days;
-  const driverFee = details.professionalDriver === 'yes' ? 1000 * days : 0;
+  const driverFee = details.professionalDriver === 'yes' ? 1000 : 0;
   const routeFee = Math.max(0, destinations.length - 1) * 300;
   
-  return { baseCost, driverFee, routeFee, total: baseCost + driverFee + routeFee, days };
+  return { baseCost, driverFee, routeFee, total: baseCost + driverFee + routeFee, days, ratePerDay };
 }
 
 function formatCurrency(n: number) {
@@ -734,6 +780,8 @@ function ConfirmationStage({
   destinations,
   details,
   rates,
+  pricingSheets,
+  locations,
   onBack,
   onAddToRequest,
 }: {
@@ -741,10 +789,12 @@ function ConfirmationStage({
   destinations: Destination[];
   details: BookingDetails;
   rates: PricingRate[];
+  pricingSheets: any[];
+  locations: any[];
   onBack: () => void;
   onAddToRequest: () => void;
 }) {
-  const pricing = calcPrice(car, details, destinations, rates);
+  const pricing = calcPrice(car, details, destinations, rates, pricingSheets, locations);
   const routeLegs = destinations.map((_, i) => ({
     from: i === 0 ? 'Pickup (Davao HQ)' : formatDestDisplay(destinations[i - 1]),
     to: formatDestDisplay(destinations[i]),
@@ -1026,6 +1076,8 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
   // Firestore Data State
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [rates, setRates] = useState<PricingRate[]>([]);
+  const [pricingSheets, setPricingSheets] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
 
   // Current booking being created
   const [selectedCar, setSelectedCar] = useState<Vehicle | null>(null);
@@ -1093,11 +1145,13 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
     }
     
     try {
-      const [vehsSnap, carTypesSnap, ratesSnap] = await withTimeout(
+      const [vehsSnap, carTypesSnap, ratesSnap, sheetsSnap, locsSnap] = await withTimeout(
         Promise.all([
           getDocs(query(collection(db, 'vehicles'), where('available', '==', true), limit(20))),
           getDocs(collection(db, 'car_types')),
-          getDocs(collection(db, 'pricing_rates'))
+          getDocs(collection(db, 'pricing_rates')),
+          getDocs(collection(db, 'pricing_sheets')),
+          getDocs(collection(db, 'locations'))
         ]), 
         8000
       );
@@ -1122,6 +1176,8 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
 
         setVehicles(mappedVehicles);
         setRates(ratesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as PricingRate)));
+        setPricingSheets(sheetsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
+        setLocations(locsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
       } else {
         loadMockFallback();
       }
@@ -1159,7 +1215,7 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
 
   function handleAddToRequest() {
     if (!selectedCar) return;
-    const pricing = calcPrice(selectedCar, bookingDetails, destinations, rates);
+    const pricing = calcPrice(selectedCar, bookingDetails, destinations, rates, pricingSheets, locations);
     const newRequest: BookingRequest = {
       id: editingId || `req-${Date.now()}`,
       car: selectedCar,
@@ -1227,18 +1283,21 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
           const withDriver = req.details.professionalDriver === 'yes';
           const driverFee = withDriver ? 1000 : 0;
           
+          // Recalculate to get the exact rate used
+          const pInfo = calcPrice(req.car, req.details, req.destinations, rates, pricingSheets, locations);
+          
           const priceBreakdown = shouldStorePriceAtBookingTime() ? {
-            baseTotal: req.totalPrice - driverFee,
-            driverFee: driverFee,
-            totalHours: Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60)),
-            blocks24h: Math.floor(Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60)) / 24),
-            blocks12h: Math.floor((Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60)) % 24) / 12),
-            extraHours: (Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60)) % 24) % 12,
+            baseTotal: req.totalPrice - (withDriver ? 1000 : 0),
+            driverFee: withDriver ? 1000 : 0,
+            totalHours: pInfo.days * 24, // Approximation
+            blocks24h: pInfo.days,
+            blocks12h: 0,
+            extraHours: 0,
             hourlyRate: 200,
-            rate12h: req.car.pricePerDay / 2,
-            rate24h: req.car.pricePerDay,
-            matchedLocationId: 'loc_gensan',
-            matchedLocationName: 'General Santos City',
+            rate12h: pInfo.ratePerDay / 2,
+            rate24h: pInfo.ratePerDay,
+            matchedLocationId: 'dynamic',
+            matchedLocationName: req.destinations.map(d => d.city).join(', '),
             carTypeId: req.car.car_type_id || '',
             carTypeName: req.car.type,
             scheduledPriceApplied: false,
@@ -1345,6 +1404,8 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
                destinations={destinations}
                details={bookingDetails}
                rates={rates}
+               pricingSheets={pricingSheets}
+               locations={locations}
                onBack={() => setStage('details')}
                onAddToRequest={handleAddToRequest}
              />
