@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from "react";
+import { ColorWheel } from "@/components/ui/ColorWheel";
 
 interface SystemSettings {
   companyName: string;
@@ -15,6 +16,12 @@ interface SystemSettings {
   lateFeePercent: number;
   sessionTimeoutMinutes: number;
   pricingBehaviorMode: 'locked' | 'recalculated';
+  // Branding Theme Colors
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  sidebarColor: string;
+  headerColor: string;
 }
 
 const DEFAULT_SETTINGS: SystemSettings = {
@@ -31,6 +38,12 @@ const DEFAULT_SETTINGS: SystemSettings = {
   lateFeePercent: 15,
   sessionTimeoutMinutes: 120,
   pricingBehaviorMode: 'locked',
+  // Branding Theme Colors (default green theme)
+  primaryColor: '#10b981',
+  secondaryColor: '#3b82f6',
+  accentColor: '#f59e0b',
+  sidebarColor: '#1e293b',
+  headerColor: '#ffffff',
 };
 
 const getSettings = (): SystemSettings => {
@@ -203,6 +216,169 @@ export default function SystemSettingsPage() {
                   </p>
                 </div>
               </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Branding Customization - Theme & Colors */}
+      <div className="card border-2 border-purple-100 shadow-xl">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center shadow-inner">
+            <span className="text-purple-700 text-xl">🎨</span>
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-900 leading-tight">Branding Customization</h2>
+            <p className="text-sm text-slate-500 font-medium">Customize theme colors using the color wheel.</p>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Primary Color */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div 
+                className="w-6 h-6 rounded-full border-2 border-slate-200"
+                style={{ backgroundColor: settings.primaryColor }}
+              />
+              <label className="text-sm font-bold text-slate-700">Primary Color</label>
+            </div>
+            <p className="text-xs text-slate-500 mb-3">Main brand color for buttons, links, and key UI elements.</p>
+            <ColorWheel
+              value={settings.primaryColor}
+              onChange={(color) => update('primaryColor', color)}
+              size={180}
+            />
+          </div>
+
+          {/* Secondary Color */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div 
+                className="w-6 h-6 rounded-full border-2 border-slate-200"
+                style={{ backgroundColor: settings.secondaryColor }}
+              />
+              <label className="text-sm font-bold text-slate-700">Secondary Color</label>
+            </div>
+            <p className="text-xs text-slate-500 mb-3">Supporting color for secondary actions and highlights.</p>
+            <ColorWheel
+              value={settings.secondaryColor}
+              onChange={(color) => update('secondaryColor', color)}
+              size={180}
+            />
+          </div>
+
+          {/* Accent Color */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div 
+                className="w-6 h-6 rounded-full border-2 border-slate-200"
+                style={{ backgroundColor: settings.accentColor }}
+              />
+              <label className="text-sm font-bold text-slate-700">Accent Color</label>
+            </div>
+            <p className="text-xs text-slate-500 mb-3">Attention-grabbing color for notifications and warnings.</p>
+            <ColorWheel
+              value={settings.accentColor}
+              onChange={(color) => update('accentColor', color)}
+              size={180}
+            />
+          </div>
+
+          {/* Sidebar Color */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div 
+                className="w-6 h-6 rounded-full border-2 border-slate-200"
+                style={{ backgroundColor: settings.sidebarColor }}
+              />
+              <label className="text-sm font-bold text-slate-700">Sidebar Color</label>
+            </div>
+            <p className="text-xs text-slate-500 mb-3">Background color for the admin sidebar navigation.</p>
+            <ColorWheel
+              value={settings.sidebarColor}
+              onChange={(color) => update('sidebarColor', color)}
+              size={180}
+            />
+          </div>
+
+          {/* Header Color */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div 
+                className="w-6 h-6 rounded-full border-2 border-slate-200"
+                style={{ backgroundColor: settings.headerColor }}
+              />
+              <label className="text-sm font-bold text-slate-700">Header Color</label>
+            </div>
+            <p className="text-xs text-slate-500 mb-3">Background color for the page header area.</p>
+            <ColorWheel
+              value={settings.headerColor}
+              onChange={(color) => update('headerColor', color)}
+              size={180}
+            />
+          </div>
+
+          {/* Theme Preview */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-200">
+            <label className="text-sm font-bold text-slate-700 mb-3 block">Live Preview</label>
+            <div className="space-y-3">
+              {/* Preview Sidebar */}
+              <div 
+                className="p-3 rounded-xl text-white text-xs font-medium"
+                style={{ backgroundColor: settings.sidebarColor }}
+              >
+                <div className="flex items-center gap-2">
+                  <span>☰</span>
+                  <span>Sidebar Navigation</span>
+                </div>
+              </div>
+              
+              {/* Preview Header */}
+              <div 
+                className="p-3 rounded-xl border text-xs font-medium"
+                style={{ 
+                  backgroundColor: settings.headerColor,
+                  borderColor: settings.primaryColor,
+                  color: settings.headerColor === '#ffffff' ? '#1e293b' : '#ffffff'
+                }}
+              >
+                Page Header Area
+              </div>
+              
+              {/* Preview Buttons */}
+              <div className="flex gap-2">
+                <button
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-white"
+                  style={{ backgroundColor: settings.primaryColor }}
+                >
+                  Primary
+                </button>
+                <button
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-white"
+                  style={{ backgroundColor: settings.secondaryColor }}
+                >
+                  Secondary
+                </button>
+                <button
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-white"
+                  style={{ backgroundColor: settings.accentColor }}
+                >
+                  Accent
+                </button>
+              </div>
+
+              {/* Preview Alert */}
+              <div 
+                className="p-2 rounded-lg text-xs"
+                style={{ 
+                  backgroundColor: `${settings.accentColor}20`,
+                  border: `1px solid ${settings.accentColor}`,
+                  color: settings.accentColor
+                }}
+              >
+                ⚠️ Alert notification preview
+              </div>
             </div>
           </div>
         </div>

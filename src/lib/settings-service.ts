@@ -16,6 +16,12 @@ export interface SystemSettings {
   lateFeePercent: number;
   sessionTimeoutMinutes: number;
   pricingBehaviorMode: PricingBehaviorMode;
+  // Branding Theme Colors
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  sidebarColor: string;
+  headerColor: string;
 }
 
 export function getSystemSettings(): SystemSettings {
@@ -37,6 +43,12 @@ export function getSystemSettings(): SystemSettings {
         lateFeePercent: typeof parsed.lateFeePercent === 'number' ? parsed.lateFeePercent : 15,
         sessionTimeoutMinutes: typeof parsed.sessionTimeoutMinutes === 'number' ? parsed.sessionTimeoutMinutes : 120,
         pricingBehaviorMode: parsed.pricingBehaviorMode || 'locked',
+        // Theme Colors
+        primaryColor: parsed.primaryColor || '#10b981',
+        secondaryColor: parsed.secondaryColor || '#3b82f6',
+        accentColor: parsed.accentColor || '#f59e0b',
+        sidebarColor: parsed.sidebarColor || '#1e293b',
+        headerColor: parsed.headerColor || '#ffffff',
       };
     }
   } catch {}
@@ -58,6 +70,12 @@ export function getDefaultSettings(): SystemSettings {
     lateFeePercent: 15,
     sessionTimeoutMinutes: 120,
     pricingBehaviorMode: 'locked',
+    // Branding Theme Colors (default green theme)
+    primaryColor: '#10b981',
+    secondaryColor: '#3b82f6',
+    accentColor: '#f59e0b',
+    sidebarColor: '#1e293b',
+    headerColor: '#ffffff',
   };
 }
 
@@ -77,4 +95,31 @@ export function shouldRecalculatePrice(): boolean {
 export function getSessionTimeoutMs(): number {
   const settings = getSystemSettings();
   return settings.sessionTimeoutMinutes * 60 * 1000;
+}
+
+// Theme color helpers
+export function getThemeColors() {
+  const settings = getSystemSettings();
+  return {
+    primary: settings.primaryColor,
+    secondary: settings.secondaryColor,
+    accent: settings.accentColor,
+    sidebar: settings.sidebarColor,
+    header: settings.headerColor,
+  };
+}
+
+export function applyThemeColors(colors: {
+  primary?: string;
+  secondary?: string;
+  accent?: string;
+  sidebar?: string;
+  header?: string;
+}) {
+  const root = document.documentElement;
+  if (colors.primary) root.style.setProperty('--theme-primary', colors.primary);
+  if (colors.secondary) root.style.setProperty('--theme-secondary', colors.secondary);
+  if (colors.accent) root.style.setProperty('--theme-accent', colors.accent);
+  if (colors.sidebar) root.style.setProperty('--theme-sidebar', colors.sidebar);
+  if (colors.header) root.style.setProperty('--theme-header', colors.header);
 }
