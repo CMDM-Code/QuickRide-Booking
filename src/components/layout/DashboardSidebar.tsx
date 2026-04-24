@@ -10,7 +10,6 @@ import { useBranding } from "@/components/providers/BrandingProvider";
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: "📊" },
   { name: "My Bookings", href: "/dashboard/bookings", icon: "🚗" },
-  { name: "Favorites", href: "/dashboard/favorites", icon: "❤️" },
   { name: "Payments", href: "/dashboard/payments", icon: "💳" },
   { name: "Notifications", href: "/dashboard/notifications", icon: "🔔" },
   { name: "Reviews", href: "/dashboard/reviews", icon: "⭐" },
@@ -52,7 +51,7 @@ const Sidebar = () => {
 
       {/* Sidebar - Premium Dark Look */}
       <aside
-        className={`fixed top-20 md:top-24 bottom-0 left-0 z-40 w-72 bg-slate-900 shadow-[20px_0_40px_-15px_rgba(0,0,0,0.5)] transform transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) flex flex-col
+        className={`fixed top-0 bottom-0 left-0 z-40 w-72 bg-slate-900 shadow-[20px_0_40px_-15px_rgba(0,0,0,0.5)] transform transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) flex flex-col
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >

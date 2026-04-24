@@ -680,7 +680,7 @@ function BookingDetailsStage({
                   className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 appearance-none outline-none focus:border-green-600"
                 >
                   <option value="no">Self Drive (No Driver)</option>
-                  <option value="yes">Yes, include Driver (+₱1000/day)</option>
+                  <option value="yes">Yes, include Driver (+₱1000)</option>
                 </select>
              </div>
           </div>

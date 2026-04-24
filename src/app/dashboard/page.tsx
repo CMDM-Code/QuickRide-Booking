@@ -1,27 +1,39 @@
 'use client';
 
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { 
   collection, 
   getDocs, 
   query, 
   where, 
-  orderBy, 
-  updateDoc, 
-  doc, 
-  Timestamp 
+  orderBy 
 } from "firebase/firestore";
 import { authClient } from "@/lib/auth-client";
-import { Booking, Vehicle, Location } from "@/lib/types";
+import { Booking } from "@/lib/types";
 import { withTimeout } from "@/lib/api-utils";
-import { useRouter } from "next/navigation";
+import { 
+  Clock, 
+  CheckCircle2, 
+  MapPin, 
+  Calendar, 
+  ArrowRight,
+  Bell,
+  Star,
+  ShieldCheck,
+  CreditCard
+} from "lucide-react";
 
 export default function DashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [stats, setStats] = useState({
+    pending: 0,
+    approved: 0,
+    active: 0
+  });
   const router = useRouter();
 
   useEffect(() => {
@@ -34,8 +46,6 @@ export default function DashboardPage() {
       const user = authClient.getCurrentUser();
       
       if (user && db) {
-        setUserId(user.id);
-        
         // Fetch all needed data in parallel for manual join
         const [bookingsSnap, vehiclesSnap, locationsSnap] = await withTimeout(
           Promise.all([
@@ -64,6 +74,13 @@ export default function DashboardPage() {
         }) as Booking[];
         
         setBookings(data);
+        
+        // Calculate stats
+        setStats({
+          pending: data.filter(b => b.status === 'pending').length,
+          approved: data.filter(b => b.status === 'approved').length,
+          active: data.filter(b => b.status === 'active').length
+        });
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -71,26 +88,6 @@ export default function DashboardPage() {
       setLoading(false);
     }
   }
-
-  const handleCancel = async (id: string, status: string) => {
-    if (status !== 'pending' && !confirm('This booking is already confirmed. Request cancellation?')) return;
-    if (status === 'pending' && !confirm('Are you sure you want to cancel this request?')) return;
-
-    if (!db) return;
-    try {
-      await updateDoc(doc(db, 'bookings', id), {
-          status: 'cancelled'
-      });
-      fetchUserDataAndBookings();
-    } catch (error) {
-      console.error("Error cancelling booking:", error);
-    }
-  };
-
-  const handleEditRequest = () => {
-    // Navigate to the dedicated bookings page which has the full Edit modal
-    router.push('/dashboard/bookings');
-  };
 
   if (loading) {
     return (
@@ -101,94 +98,188 @@ export default function DashboardPage() {
   }
 
   return (
-      <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Your Trips</h1>
-            <p className="text-slate-500 font-medium">Manage your rental requests and confirmed journeys.</p>
+    <div className="space-y-10">
+      {/* Welcome & Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="md:col-span-2 bg-slate-900 rounded-[2.5rem] p-8 text-white flex flex-col justify-between relative overflow-hidden shadow-2xl shadow-slate-900/20">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+          <div className="relative z-10">
+            <h1 className="text-3xl font-black mb-2">Drive Premium.</h1>
+            <p className="text-green-100/70 font-medium text-sm leading-relaxed max-w-[280px]">
+              Your journey is our priority. Manage your fleet and bookings with precision.
+            </p>
           </div>
-          <Link 
-            href="/" 
-            className="px-6 py-3 bg-slate-100 font-bold text-slate-600 rounded-xl hover:bg-slate-200 transition-all flex items-center gap-2"
-          >
-            <span>✨ New Booking</span>
-          </Link>
+          <div className="mt-8 flex gap-3 relative z-10">
+            <Link href="/" className="px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all">
+              New Booking
+            </Link>
+            <Link href="/dashboard/bookings" className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all backdrop-blur-md">
+              My Trips
+            </Link>
+          </div>
         </div>
 
-        <div className="grid gap-6">
-          {bookings.map((booking) => (
-            <div key={booking.id} className="bg-white rounded-[2rem] shadow-xl border border-slate-100 p-8 flex flex-col md:flex-row gap-8 items-center">
-              <div className="w-full md:w-48 h-32 bg-slate-50 rounded-2xl overflow-hidden shadow-inner flex shrink-0">
-                  {booking.vehicle?.image_url ? (
-                      <img src={booking.vehicle.image_url} alt="car" className="w-full h-full object-cover" />
-                  ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl">🚗</div>
-                  )}
+        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col justify-between">
+           <div className="flex items-center justify-between">
+              <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
+                 <Clock className="w-6 h-6 text-amber-600" />
               </div>
-              
-              <div className="flex-1 space-y-4 text-center md:text-left">
-                <div className="flex flex-col md:flex-row md:items-center gap-2">
-                  <h3 className="text-xl font-black text-slate-900">{booking.vehicle?.name}</h3>
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit mx-auto md:mx-0 ${
-                    booking.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 
-                    booking.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {booking.status}
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs font-bold text-slate-500 uppercase tracking-tight">
-                  <div>
-                    <p className="text-slate-400 mb-1">Duration</p>
-                    <p className="text-slate-900">
-                      {(typeof (booking.start_date as any)?.toDate === 'function' ? (booking.start_date as any).toDate() : new Date(booking.start_date)).toLocaleDateString()} –{' '}
-                      {(typeof (booking.end_date as any)?.toDate === 'function' ? (booking.end_date as any).toDate() : new Date(booking.end_date)).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 mb-1">Location</p>
-                    <p className="text-slate-900">{booking.pickup_location?.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 mb-1">Total Paid</p>
-                    <p className="text-green-700">₱{booking.total_price.toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Waitlist</span>
+           </div>
+           <div>
+              <p className="text-4xl font-black text-slate-900">{stats.pending}</p>
+              <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Pending Approval</p>
+           </div>
+        </div>
 
-              <div className="flex flex-col gap-3 w-full md:w-auto">
-                {booking.status !== 'cancelled' && booking.status !== 'completed' && (
-                  <>
-                    <button 
-                        onClick={() => handleEditRequest()}
-                        className="px-6 py-3 bg-green-700 text-white rounded-xl font-bold hover:bg-green-800 transition-all text-sm"
-                    >
-                        {booking.status === 'pending' ? 'Edit Request' : 'Request Changes'}
-                    </button>
-                    <button 
-                        onClick={() => handleCancel(booking.id, booking.status)}
-                        className="px-6 py-3 bg-white border-2 border-slate-100 text-slate-400 rounded-xl font-bold hover:border-red-100 hover:text-red-500 transition-all text-sm"
-                    >
-                        Cancel Booking
-                    </button>
-                  </>
-                )}
+        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col justify-between">
+           <div className="flex items-center justify-between">
+              <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
+                 <CreditCard className="w-6 h-6 text-blue-600" />
               </div>
-            </div>
-          ))}
-
-          {bookings.length === 0 && (
-            <div className="py-20 text-center bg-slate-50 rounded-[3rem] border-4 border-dashed border-slate-200">
-               <div className="text-6xl mb-4">🗺️</div>
-               <h3 className="text-xl font-black text-slate-900">No Trips Found</h3>
-               <p className="text-slate-400 font-bold mt-1">Ready for an adventure? Start by booking a vehicle.</p>
-               <Link href="/" className="inline-block mt-8 px-10 py-4 bg-green-700 text-white rounded-2xl font-black shadow-xl shadow-green-700/20">
-                  Explore Fleet
-               </Link>
-            </div>
-          )}
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Payments</span>
+           </div>
+           <div>
+              <p className="text-4xl font-black text-slate-900">{stats.approved}</p>
+              <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Awaiting Payment</p>
+           </div>
         </div>
       </div>
+
+      <div className="grid lg:grid-cols-3 gap-10">
+        {/* Main Content: Booking Timeline */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-green-700" />
+              Current Activity
+            </h2>
+            <Link href="/dashboard/bookings" className="text-xs font-bold text-green-700 hover:underline uppercase tracking-widest">
+              View All History
+            </Link>
+          </div>
+
+          <div className="space-y-4">
+            {bookings.slice(0, 3).map((booking) => (
+              <div key={booking.id} className="group bg-white rounded-[2rem] p-6 border border-slate-100 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:border-green-100 transition-all flex flex-col md:flex-row gap-6">
+                <div className="w-full md:w-40 h-28 bg-slate-50 rounded-2xl overflow-hidden shrink-0 shadow-inner">
+                  {booking.vehicle?.image_url ? (
+                    <img src={booking.vehicle.image_url} alt="car" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl opacity-50">🚗</div>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0 py-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-lg font-black text-slate-900 truncate">{booking.vehicle?.name}</h3>
+                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
+                      booking.status === 'approved' ? 'bg-blue-100 text-blue-700' :
+                      booking.status === 'active' ? 'bg-green-100 text-green-700' :
+                      booking.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                      'bg-slate-100 text-slate-500'
+                    }`}>
+                      {booking.status}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-x-6 gap-y-2">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold">
+                       <MapPin size={14} className="text-slate-300" />
+                       {booking.pickup_location?.name}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold">
+                       <ShieldCheck size={14} className="text-slate-300" />
+                       {booking.with_driver ? 'Chauffeur Service' : 'Self-Drive'}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-center gap-2">
+                    <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                       <div 
+                         className={`h-full transition-all duration-1000 ${
+                           booking.status === 'pending' ? 'w-1/4 bg-amber-500' :
+                           booking.status === 'approved' ? 'w-1/2 bg-blue-500' :
+                           booking.status === 'active' ? 'w-3/4 bg-green-500' :
+                           booking.status === 'completed' ? 'w-full bg-slate-900' : 'w-0'
+                         }`}
+                       ></div>
+                    </div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                       {booking.status === 'pending' ? 'Reviewing' :
+                        booking.status === 'approved' ? 'Awaiting Payment' :
+                        booking.status === 'active' ? 'On Trip' :
+                        booking.status === 'completed' ? 'Finished' : 'Process'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center md:px-4">
+                   <Link 
+                     href={`/dashboard/bookings?id=${booking.id}`}
+                     className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-950 hover:text-white transition-all shadow-sm"
+                   >
+                     <ArrowRight size={20} />
+                   </Link>
+                </div>
+              </div>
+            ))}
+
+            {bookings.length === 0 && (
+              <div className="py-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-slate-100">
+                <p className="text-slate-400 font-bold">No active rentals found.</p>
+                <Link href="/" className="inline-block mt-4 text-green-700 font-black uppercase text-xs tracking-widest hover:underline">
+                  Start your first booking →
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sidebar: Notifications & Feedback */}
+        <div className="space-y-8">
+           <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/50">
+             <div className="flex items-center justify-between mb-8">
+               <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                 <Bell className="w-5 h-5 text-blue-600" />
+                 Notifications
+               </h2>
+               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+             </div>
+
+             <div className="space-y-6">
+                {[
+                  { title: 'Payment Success', time: '2h ago', text: 'Booking #QR921 has been confirmed.', type: 'success' },
+                  { title: 'Promo Unlocked', time: '5h ago', text: 'Enjoy 10% off on your next SUV rental.', type: 'promo' },
+                  { title: 'System Update', time: '1d ago', text: 'New region: South Cotabato is now live.', type: 'info' }
+                ].map((notif, i) => (
+                  <div key={i} className="relative pl-6 border-l-2 border-slate-100 pb-2">
+                     <div className="absolute -left-[5px] top-0 w-2 h-2 rounded-full bg-slate-200"></div>
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{notif.time}</p>
+                     <p className="text-sm font-bold text-slate-800 mt-0.5">{notif.title}</p>
+                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">{notif.text}</p>
+                  </div>
+                ))}
+             </div>
+
+             <button className="w-full mt-8 py-4 bg-slate-50 text-slate-600 rounded-2xl font-black uppercase tracking-widest text-[9px] hover:bg-slate-100 transition-all">
+                Mark All Read
+             </button>
+           </div>
+
+           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-[2.5rem] p-8 border border-green-100/50 shadow-xl">
+              <Star className="w-8 h-8 text-green-600 mb-4" />
+              <h3 className="text-xl font-black text-slate-900 mb-2">Share Feedback</h3>
+              <p className="text-xs text-slate-600 font-medium leading-relaxed mb-6">
+                How was your recent trip with the Mitsubishi Mirage? Help us improve.
+              </p>
+              <Link href="/dashboard/reviews" className="flex items-center justify-center w-full py-4 bg-white text-green-700 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-sm hover:shadow-md transition-all">
+                 Write a Review
+              </Link>
+           </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -1,11 +1,35 @@
 'use client';
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { db } from "@/lib/firebase";
+import { collection, getCountFromServer } from "firebase/firestore";
 
 export default function AboutUsPage() {
+  const [stats, setStats] = useState({ vehicles: 0, bookings: 0 });
+
+  useEffect(() => {
+    async function fetchStats() {
+      if (!db) return;
+      try {
+        const [vSnap, bSnap] = await Promise.all([
+          getCountFromServer(collection(db, 'vehicles')),
+          getCountFromServer(collection(db, 'bookings'))
+        ]);
+        setStats({
+          vehicles: vSnap.data().count || 0,
+          bookings: bSnap.data().count || 0
+        });
+      } catch (err) {
+        console.error("Error fetching about stats:", err);
+      }
+    }
+    fetchStats();
+  }, []);
+
   return (
     <>
     <Navbar />
@@ -26,12 +50,12 @@ export default function AboutUsPage() {
             </p>
             <div className="flex gap-4 pt-4">
               <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                 <p className="text-3xl font-black text-slate-900 mb-1">5k+</p>
-                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Elite Members</p>
+                 <p className="text-3xl font-black text-slate-900 mb-1">{stats.bookings > 100 ? `${Math.floor(stats.bookings/10)*10}+` : stats.bookings}</p>
+                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Completed Journeys</p>
               </div>
               <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                 <p className="text-3xl font-black text-slate-900 mb-1">6</p>
-                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Regions Served</p>
+                 <p className="text-3xl font-black text-slate-900 mb-1">{stats.vehicles}</p>
+                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Premium Fleet</p>
               </div>
             </div>
           </div>
@@ -74,7 +98,7 @@ export default function AboutUsPage() {
         <div className="mt-24 text-center">
            <h2 className="text-3xl font-black text-slate-900 mb-6">Ready to hit the road?</h2>
            <Link href="/auth/signup" className="inline-block px-10 py-5 bg-green-700 text-white rounded-full font-bold text-lg hover:bg-green-800 transition-all shadow-xl shadow-green-700/20 hover:scale-105">
-              Initialize Your Membership
+              Start Your Journey
            </Link>
         </div>
       </div>

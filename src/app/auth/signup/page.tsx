@@ -92,7 +92,7 @@ export default function SignupPage() {
           <div className="relative z-10 flex flex-col justify-center px-16 py-20">
             <div className="space-y-8">
               <div className="text-green-400 font-semibold text-sm uppercase tracking-wider">
-                Membership Access
+                QuickRide Access
               </div>
               <h2 className="text-4xl md:text-5xl font-bold text-white leading-tight">
                 The Future Of Motion.
@@ -108,7 +108,7 @@ export default function SignupPage() {
         <div className="w-full lg:w-1/2 flex items-center justify-center px-8 py-20 bg-white">
           <div className="w-full max-w-md">
             <div className="text-center lg:text-left mb-10">
-              <h1 className="text-3xl font-bold text-slate-900 mb-3">Initialize Membership</h1>
+              <h1 className="text-3xl font-bold text-slate-900 mb-3">Create Account</h1>
               <p className="text-slate-600">Start your premium automotive experience.</p>
             </div>
 
@@ -189,7 +189,7 @@ export default function SignupPage() {
                       </svg>
                       <span>Creating account...</span>
                     </div>
-                  ) : "Initialize Membership"}
+                  ) : "Create Account"}
                 </button>
 
                 <div className="flex items-center justify-center py-2">

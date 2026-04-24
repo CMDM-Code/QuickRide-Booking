@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import {
   addDoc,
@@ -46,6 +46,7 @@ function toIsoDateInput(d: Date | null | undefined) {
 
 export default function PricingSchedulesPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const highlightId = searchParams.get('highlight');
 
   const [schedules, setSchedules] = useState<PricingSchedule[]>([]);
@@ -392,7 +393,10 @@ export default function PricingSchedulesPage() {
               Calendar
             </button>
           </div>
-          <button onClick={resetForm} className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-black flex items-center gap-2 shadow-lg transition-all hover:scale-105 active:scale-95">
+          <button 
+            onClick={() => router.push("/admin/pricing/schedules/new")} 
+            className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-black flex items-center gap-2 shadow-lg transition-all hover:scale-105 active:scale-95"
+          >
             <Plus className="w-4 h-4" />
             New Schedule
           </button>

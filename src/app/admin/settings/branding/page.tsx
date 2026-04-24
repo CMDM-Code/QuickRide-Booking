@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useBranding } from "@/components/providers/BrandingProvider";
 import { updateBrandingConfig, uploadLogo } from "@/lib/branding-service";
 import { BrandingConfig } from "@/lib/types";
-import { ColorWheel } from "@/components/ui/colorwheel";
+import { ColorWheel } from "@/components/ui/ColorWheel";
 import { 
   Palette, 
   Upload, 
@@ -18,12 +18,17 @@ import {
 export default function BrandingSettingsPage() {
   const { branding, refreshBranding } = useBranding();
   const [config, setConfig] = useState<BrandingConfig>(branding);
+  const [mounted, setMounted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useEffect(() => {
-    setConfig(branding);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (branding) setConfig(branding);
   }, [branding]);
 
   const handleSave = async () => {
@@ -66,6 +71,14 @@ export default function BrandingSettingsPage() {
       }
     }));
   };
+
+  if (!mounted || !config) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <RefreshCcw className="w-8 h-8 animate-spin text-slate-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
