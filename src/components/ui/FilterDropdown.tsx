@@ -22,7 +22,7 @@ export interface ActiveFilters {
 interface FilterDropdownProps {
   filters: FilterConfig[];
   onApply: (filters: ActiveFilters) => void;
-  children: (activeFilters: ActiveFilters) => ReactNode;
+  children?: (activeFilters: ActiveFilters) => ReactNode;
 }
 
 export function FilterDropdown({ filters, onApply, children }: FilterDropdownProps) {
@@ -282,7 +282,7 @@ export function FilterDropdown({ filters, onApply, children }: FilterDropdownPro
       )}
 
       {/* Content */}
-      <div className="mt-4">{children(activeFilters)}</div>
+      {children && <div className="mt-4">{children(activeFilters)}</div>}
     </div>
   );
 }

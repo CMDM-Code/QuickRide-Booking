@@ -118,7 +118,7 @@ export default function AdminLoginPage() {
               ) : "Access Admin Portal"}
             </button>
             <div className="text-center mt-4">
-               <a href="/auth/forgot-password" size="sm" className="text-xs font-bold text-slate-400 hover:text-green-700 transition-colors underline underline-offset-2">Forgot your administrator password?</a>
+               <a href="/auth/forgot-password" className="text-xs font-bold text-slate-400 hover:text-green-700 transition-colors underline underline-offset-2">Forgot your administrator password?</a>
             </div>
           </form>
 

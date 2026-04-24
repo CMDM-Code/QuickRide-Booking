@@ -6,13 +6,13 @@ import {
 import { 
   PricingSheet, 
   Location, 
-  Booking,
-  PricingMeta as PricingMetaType
+  Booking
 } from "./types";
 import { 
   buildLocationsIndex, 
   resolveRatesForLocation, 
-  getLocationChain 
+  getLocationChain,
+  PricingMeta as PricingMetaType
 } from "./pricing";
 import { 
   calculateTotalRental, 
@@ -32,43 +32,47 @@ export function recalculateBookingPrice(
   pricingMeta: PricingMetaType
 ): { totalPrice: number; breakdown: PricingBreakdown; schedule: PricingSchedule | null } {
   const { byId } = buildLocationsIndex(locations);
-  const vehicleId = booking.car_id;
   
-  // We need to find the vehicle's car type. In a real scenario, we'd fetch the vehicle doc.
-  // For recalculation, we assume the booking already has car_type_id or we use what's in the sheets.
-  // Assuming booking has car_type_id stored.
-  const carTypeId = (booking as any).car_type_id; 
-  if (!carTypeId) return { totalPrice: booking.total_price, breakdown: (booking as any).price_breakdown, schedule: null };
+  // car_type_id is needed to find the correct pricing sheet.
+  // We try multiple sources for it.
+  const carTypeId = (booking as any).car_type_id || booking.vehicle?.car_type_id;
+  
+  if (!carTypeId) {
+    return { totalPrice: booking.total_price, breakdown: (booking as any).price_breakdown, schedule: null };
+  }
 
   const sheet = pricingSheets.find(s => s.id === carTypeId);
   if (!sheet) return { totalPrice: booking.total_price, breakdown: (booking as any).price_breakdown, schedule: null };
 
-  const start = booking.start_date instanceof Date ? booking.start_date : new Date(booking.start_date);
-  const end = booking.end_date instanceof Date ? booking.end_date : new Date(booking.end_date);
+  const start = new Date(booking.start_date);
+  const end = new Date(booking.end_date);
 
-  // For multi-destination, use the same logic as BookingForm (conservative max)
+  // For multi-destination, we check the pickup location and all dropoff locations
+  const destIds = [
+    booking.pickup_location_id,
+    ...(booking.dropoff_locations_ids || [])
+  ].filter(Boolean);
+
   let max12h: number | null = null;
   let max24h: number | null = null;
   let maxHourly: number | null = null;
 
-  const destIds = Array.isArray(booking.location_id) ? booking.location_id : [booking.location_id];
-
   for (const locId of destIds) {
     const resolved = resolveRatesForLocation(sheet, locId, byId, pricingMeta.fallbackLocationId);
-    if (!resolved || resolved.rate12h === null || resolved.rate24h === null) continue;
+    if (!resolved) continue;
 
-    if (max12h === null || resolved.rate12h > max12h) max12h = resolved.rate12h;
-    if (max24h === null || resolved.rate24h > max24h) max24h = resolved.rate24h;
-    if (maxHourly === null || (resolved.rateHourly ?? pricingMeta.hourlyRate) > maxHourly) {
-        maxHourly = resolved.rateHourly ?? pricingMeta.hourlyRate;
-    }
+    if (resolved.rate12h !== null && (max12h === null || resolved.rate12h > max12h)) max12h = resolved.rate12h;
+    if (resolved.rate24h !== null && (max24h === null || resolved.rate24h > max24h)) max24h = resolved.rate24h;
+    
+    const hourly = resolved.rateHourly ?? pricingMeta.hourlyRate;
+    if (maxHourly === null || hourly > maxHourly) maxHourly = hourly;
   }
 
-  if (max12h === null || max24h === null) {
-      return { totalPrice: booking.total_price, breakdown: (booking as any).price_breakdown, schedule: null };
-  }
+  // Fallbacks if no rates found
+  if (max12h === null) max12h = 0;
+  if (max24h === null) max24h = 0;
 
-  const withDriver = (booking as any).with_driver ?? false;
+  const withDriver = booking.with_driver ?? false;
   const breakdown = calculateTotalRental(
     start, 
     end, 
@@ -79,12 +83,11 @@ export function recalculateBookingPrice(
     pricingMeta.driverFee
   );
 
-  // Get active schedule (for the time the booking was made? No, 'recalculated' means current rules)
-  // Actually, 'recalculated' usually implies 'live' pricing.
+  // Get active schedule
   const activeSchedule = pickActiveSchedule(schedules, {
     carTypeId,
     locationIds: destIds,
-    now: new Date() // Or should it be booking.created_at? Recalculated usually means current live rules.
+    now: new Date() 
   });
 
   const baseTotal =

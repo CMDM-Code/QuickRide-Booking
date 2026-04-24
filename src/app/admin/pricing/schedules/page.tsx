@@ -661,12 +661,29 @@ export default function PricingSchedulesPage() {
                           </div>
                         </td>
                         <td className="p-6">
-                          <div className={`inline-flex flex-col p-3 rounded-2xl border ${s.adjustment.percent && s.adjustment.percent > 0 ? 'bg-orange-50 border-orange-200' : s.adjustment.percent && s.adjustment.percent < 0 ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
-                            <span className="text-[9px] font-black uppercase text-slate-400 mb-1">Adjustment</span>
-                            <span className={`text-xl font-black ${s.adjustment.percent && s.adjustment.percent > 0 ? 'text-orange-700' : s.adjustment.percent && s.adjustment.percent < 0 ? 'text-green-700' : 'text-slate-900'}`}>
-                              {s.adjustment.kind === "flat" ? `₱${s.adjustment.amount.toLocaleString()}` : `${s.adjustment.percent}%`}
-                            </span>
-                          </div>
+                          {(() => {
+                            const val = s.adjustment.kind === 'percent' ? s.adjustment.percent : s.adjustment.amount;
+                            const isPercent = s.adjustment.kind === 'percent';
+                            const isPositive = val > 0;
+                            const isNegative = val < 0;
+                            
+                            return (
+                              <div className={`inline-flex flex-col p-3 rounded-2xl border ${
+                                isPositive ? 'bg-orange-50 border-orange-200' : 
+                                isNegative ? 'bg-green-50 border-green-200' : 
+                                'bg-slate-50 border-slate-200'
+                              }`}>
+                                <span className="text-[9px] font-black uppercase text-slate-400 mb-1">Adjustment</span>
+                                <span className={`text-xl font-black ${
+                                  isPositive ? 'text-orange-700' : 
+                                  isNegative ? 'text-green-700' : 
+                                  'text-slate-900'
+                                }`}>
+                                  {isPercent ? `${val}%` : `₱${val.toLocaleString()}`}
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="p-6 text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -746,7 +763,11 @@ export default function PricingSchedulesPage() {
                         <div 
                           key={s.id} 
                           onClick={() => onEdit(s)}
-                          className={`px-2 py-1 rounded text-[9px] font-black truncate cursor-pointer transition-all hover:scale-105 ${s.adjustment.percent && s.adjustment.percent > 0 ? 'bg-orange-100 text-orange-800' : s.adjustment.percent && s.adjustment.percent < 0 ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}
+                          className={`px-2 py-1 rounded text-[9px] font-black truncate cursor-pointer transition-all hover:scale-105 ${
+                            s.adjustment.kind === 'percent' 
+                              ? (s.adjustment.percent > 0 ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800') 
+                              : (s.adjustment.amount > 0 ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800')
+                          }`}
                         >
                           <div className="flex items-center gap-1">
                             <Zap className="w-2 h-2" />

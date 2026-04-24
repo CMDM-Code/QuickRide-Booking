@@ -9,18 +9,19 @@ import {
   updateDoc,
   doc,
   getDoc,
-  Timestamp
+  Timestamp,
+  serverTimestamp
 } from "firebase/firestore";
 import { adminStore } from "@/lib/admin-store";
 import { withTimeout } from "@/lib/api-utils";
 import { createNotification } from "@/lib/notification-service";
 import { fetchStaffMembers, assignBookingToStaff } from "@/lib/staff-service";
-import { Profile, PricingSheet, Location, PricingSchedule } from "@/lib/types";
+import { Profile, PricingSheet, Location } from "@/lib/types";
 import { authClient } from "@/lib/auth-client";
 import { FilterDropdown, FilterConfig, ActiveFilters } from "@/components/ui/FilterDropdown";
 import { User, ShieldCheck, UserPlus, DollarSign, Zap, Lock } from "lucide-react";
 import { getDisplayPrice } from "@/lib/booking-price-service";
-import { normalizeSchedule } from "@/lib/schedules";
+import { normalizeSchedule, type PricingSchedule } from "@/lib/schedules";
 
 type BookingSort =
   | 'created_desc'
@@ -182,11 +183,14 @@ export default function BookingManagementPage() {
       const booking = bookings.find(b => b.id === bookingId);
       if (booking) {
         await createNotification({
-          userId: booking.user_id,
+          user_id: booking.user_id,
           title: `Booking Update`,
           message: `Your booking for ${booking.vehicle.name} has been updated to ${newStatus}.`,
           type: 'booking_status',
-          actionUrl: `/dashboard/bookings/${bookingId}`
+          data: { 
+            booking_id: bookingId,
+            action_url: `/dashboard/bookings/${bookingId}` 
+          }
         });
       }
       
@@ -199,7 +203,8 @@ export default function BookingManagementPage() {
   const handleAssign = async (bookingId: string, staffId: string) => {
     setIsAssigning(bookingId);
     try {
-      await assignBookingToStaff(bookingId, staffId);
+      const adminName = authClient.getCurrentUser()?.name || "Administrator";
+      await assignBookingToStaff(bookingId, staffId, adminName);
       await fetchBookings();
     } catch (err) {
       alert("Assignment failed.");
@@ -295,9 +300,9 @@ export default function BookingManagementPage() {
                         <div className="flex items-center gap-2">
                           <span className="text-lg font-black text-slate-900">₱{price.toLocaleString()}</span>
                           {pMode === 'locked' ? (
-                            <Lock className="w-3 h-3 text-slate-300" title="Locked Price" />
+                            <span title="Locked Price"><Lock className="w-3 h-3 text-slate-300" /></span>
                           ) : (
-                            <Zap className="w-3 h-3 text-green-500 animate-pulse" title="Live/Recalculated Price" />
+                            <span title="Live/Recalculated Price"><Zap className="w-3 h-3 text-green-500 animate-pulse" /></span>
                           )}
                         </div>
                         {isRecalculated && (

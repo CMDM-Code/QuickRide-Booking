@@ -10,7 +10,8 @@ import {
   query,
   orderBy
 } from "firebase/firestore";
-import { Location, PricingSheet, PricingSchedule, LocationLevel } from "@/lib/types";
+import { Location, PricingSheet, LocationLevel } from "@/lib/types";
+import { normalizeSchedule, pickActiveSchedule, type PricingSchedule } from "@/lib/schedules";
 import { titleFromId, resolveRatesForLocation } from "@/lib/pricing";
 import { adminStore } from "@/lib/admin-store";
 import { withTimeout } from "@/lib/api-utils";
@@ -224,22 +225,11 @@ export default function PricingManagementPage() {
 
   // Logic to find active schedule for a cell
   const getActiveSchedule = (carTypeId: string, locationId: string) => {
-    const now = new Date();
-    const active = schedules.filter(s => {
-      // Basic scope check
-      if (s.scope === 'car_type' && s.carTypeId !== carTypeId) return false;
-      // Location check
-      if (s.locationId && s.locationId !== locationId) return false;
-      
-      // Date range check
-      const start = s.startDate.toDate();
-      const end = s.endDate.toDate();
-      return now >= start && now <= end;
+    return pickActiveSchedule(schedules, {
+      carTypeId,
+      locationIds: [locationId],
+      now: new Date()
     });
-
-    if (active.length === 0) return null;
-    // Return the one with highest priority (most specific location or latest updated)
-    return active.sort((a, b) => (b.updated_at?.seconds || 0) - (a.updated_at?.seconds || 0))[0];
   };
 
   if (loading) {

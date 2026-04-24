@@ -162,8 +162,9 @@ export default function BrandingSettingsPage() {
                 <div className="flex items-start gap-8">
                   <div className="w-32 h-32 shrink-0">
                     <ColorWheel 
-                      color={config.theme_colors.primary} 
+                      value={config.theme_colors.primary} 
                       onChange={(c) => updateColor('primary', c)} 
+                      size={128}
                     />
                   </div>
                   <div className="flex-1 space-y-2">
@@ -183,8 +184,9 @@ export default function BrandingSettingsPage() {
                 <div className="flex items-start gap-8">
                   <div className="w-32 h-32 shrink-0">
                     <ColorWheel 
-                      color={config.theme_colors.secondary} 
+                      value={config.theme_colors.secondary} 
                       onChange={(c) => updateColor('secondary', c)} 
+                      size={128}
                     />
                   </div>
                   <div className="flex-1 space-y-2">

@@ -302,7 +302,8 @@ export default function LevelManagementPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              );
+            })}
             </tbody>
           </table>
         </div>

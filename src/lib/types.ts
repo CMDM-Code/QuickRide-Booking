@@ -122,6 +122,7 @@ export interface PricingSheet {
   rates: Record<
     string,
     {
+      "hourly": number | null;
       "12h": number | null;
       "24h": number | null;
     }
