@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from "react";
-import { ColorWheel } from "@/components/ui/ColorWheel";
+import { ColorWheel } from "@/components/ui/colorwheel";
 import {
   SystemSettings,
   getDefaultSettings,

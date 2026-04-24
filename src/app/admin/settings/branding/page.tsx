@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useBranding } from "@/components/providers/BrandingProvider";
 import { updateBrandingConfig, uploadLogo } from "@/lib/branding-service";
 import { BrandingConfig } from "@/lib/types";
-import { ColorWheel } from "@/components/ui/ColorWheel";
+import { ColorWheel } from "@/components/ui/colorwheel";
 import { 
   Palette, 
   Upload, 
