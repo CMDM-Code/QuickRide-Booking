@@ -17,6 +17,7 @@ const AdminSidebar = () => {
     { name: "User Management", href: "/admin/users", icon: "👤" },
     { name: "Vehicle Management", href: "/admin/vehicles", icon: "🚗" },
     { name: "Location Management", href: "/admin/locations", icon: "🧭" },
+    { name: "Level Management", href: "/admin/levels", icon: "📑" },
     { name: "Pricing Management", href: "/admin/pricing", icon: "💰" },
     { name: "Pricing Schedules", href: "/admin/pricing/schedules", icon: "🗓️" },
     { name: "Booking Management", href: "/admin/bookings", icon: "📋" },

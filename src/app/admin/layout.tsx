@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "@/components/layout/AdminSidebar";
-import { getPortalSession } from "@/lib/portal-auth";
+import { getPortalSession, clearPortalSession } from "@/lib/portal-auth";
+import { initSessionManagement, destroySessionManagement } from "@/lib/session-service";
 import NotificationBell from "@/components/ui/NotificationBell";
 import { User } from "lucide-react";
 
@@ -26,12 +27,20 @@ export default function AdminLayout({
       if (session.authenticated === true && session.role === 'admin') {
         setIsVerified(true);
         setAdminName(session.email || 'Admin');
+        initSessionManagement(() => {
+          clearPortalSession();
+          router.push("/auth/logged-out");
+        });
       } else {
         router.push("/admin-login");
       }
     } catch {
       router.push("/admin-login");
     }
+
+    return () => {
+      destroySessionManagement();
+    };
   }, [router]);
 
   if (!isVerified) {

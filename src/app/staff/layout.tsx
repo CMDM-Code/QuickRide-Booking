@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import StaffSidebar from "@/components/layout/StaffSidebar";
 import { staffAuth } from "@/lib/staff-auth";
+import { initSessionManagement, destroySessionManagement } from "@/lib/session-service";
 import NotificationBell from "@/components/ui/NotificationBell";
 import { User } from "lucide-react";
 
@@ -23,7 +24,15 @@ export default function StaffLayout({
       setIsVerified(true);
       const session = staffAuth.getSession();
       setStaffName(session?.email || 'Staff member');
+      initSessionManagement(() => {
+        staffAuth.logout();
+        router.push("/auth/logged-out");
+      });
     }
+
+    return () => {
+      destroySessionManagement();
+    };
   }, [router]);
 
   if (!isVerified) {

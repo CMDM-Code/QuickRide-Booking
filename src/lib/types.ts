@@ -84,11 +84,20 @@ export interface BrandingConfig {
   updated_at?: any;
 }
 
+export interface LocationLevel {
+  id: string;
+  name: string;
+  order: number;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface Location {
   id: string;
   name: string;
   type?: string;
   parentId?: string;
+  levelId?: string;
 }
 
 export interface CarType {
@@ -158,6 +167,26 @@ export interface Vehicle {
   car_type?: CarType;
 }
 
+export interface PriceBreakdown {
+  baseTotal: number;
+  driverFee: number;
+  totalHours: number;
+  blocks24h: number;
+  blocks12h: number;
+  extraHours: number;
+  hourlyRate: number;
+  rate12h: number;
+  rate24h: number;
+  matchedLocationId: string;
+  matchedLocationName: string;
+  carTypeId: string;
+  carTypeName: string;
+  scheduledPriceApplied: boolean;
+  scheduleId?: string;
+  scheduleName?: string;
+  calculatedAt: string;
+}
+
 export interface Booking {
   id: string;
   user_id: string;
@@ -168,6 +197,8 @@ export interface Booking {
   start_date: string;
   end_date: string;
   total_price: number;
+  price_mode: 'locked' | 'recalculated';
+  price_breakdown?: PriceBreakdown;
   with_driver: boolean;
   status: 'pending' | 'approved' | 'active' | 'completed' | 'cancelled';
   is_edit_pending: boolean;

@@ -10,6 +10,7 @@ import { db } from "@/lib/firebase";
 import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, Timestamp, query, where, limit } from "firebase/firestore";
 import { authClient } from "@/lib/auth-client";
 import { PricingRate } from "@/lib/types";
+import { getPricingBehaviorMode, shouldStorePriceAtBookingTime } from "@/lib/settings-service";
 import { MOCK_VEHICLES, MOCK_RATES } from "@/lib/mock-data";
 import { ImageWithFallback } from "../ui/ImageWithFallback";
 
@@ -1219,9 +1220,30 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
          setShowSuccess(true);
       } else {
         // Create a booking document in Firebase for each request in the bucket
+        const pricingMode = getPricingBehaviorMode();
         const bookingPromises = bookingRequests.map(req => {
           const start = new Date(`${req.details.startDate}T${req.details.startTime}`);
           const end = new Date(`${req.details.endDate}T${req.details.endTime}`);
+          const withDriver = req.details.professionalDriver === 'yes';
+          const driverFee = withDriver ? 1000 : 0;
+          
+          const priceBreakdown = shouldStorePriceAtBookingTime() ? {
+            baseTotal: req.totalPrice - driverFee,
+            driverFee: driverFee,
+            totalHours: Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60)),
+            blocks24h: Math.floor(Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60)) / 24),
+            blocks12h: Math.floor((Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60)) % 24) / 12),
+            extraHours: (Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60)) % 24) % 12,
+            hourlyRate: 200,
+            rate12h: req.car.pricePerDay / 2,
+            rate24h: req.car.pricePerDay,
+            matchedLocationId: 'loc_gensan',
+            matchedLocationName: 'General Santos City',
+            carTypeId: req.car.car_type_id || '',
+            carTypeName: req.car.type,
+            scheduledPriceApplied: false,
+            calculatedAt: new Date().toISOString()
+          } : null;
           
           return addDoc(collection(firestore, 'bookings'), {
             user_id: user?.id || 'guest_booking',
@@ -1229,9 +1251,11 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
             start_date: Timestamp.fromDate(start),
             end_date: Timestamp.fromDate(end),
             total_price: req.totalPrice,
+            price_mode: pricingMode,
+            price_breakdown: priceBreakdown,
             status: 'pending',
             destinations: req.destinations.map(d => formatDestDisplay(d)),
-            with_driver: req.details.professionalDriver === 'yes',
+            with_driver: withDriver,
             pickup_location_id: 'loc_gensan',
             created_at: serverTimestamp()
           });

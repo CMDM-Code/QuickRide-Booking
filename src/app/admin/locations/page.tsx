@@ -12,6 +12,7 @@ import {
   updateDoc
 } from "firebase/firestore";
 import { withTimeout } from "@/lib/api-utils";
+import { FilterDropdown, FilterConfig, ActiveFilters } from "@/components/ui/FilterDropdown";
 
 type Loc = {
   id: string;
@@ -74,6 +75,7 @@ export default function LocationManagementPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", type: "", parentId: "" });
@@ -117,19 +119,32 @@ export default function LocationManagementPage() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [locations]);
 
+  const filterConfigs: FilterConfig[] = [
+    {
+      key: 'type',
+      label: 'Location Type',
+      options: typeOptions.map(t => ({ value: t, label: t }))
+    }
+  ];
+
   const filteredOrdered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return tree.ordered;
+    const typeFilter = activeFilters.type as string;
     return tree.ordered.filter(({ id }) => {
       const l = tree.byId[id];
-      return (
-        l &&
-        (String(l.name || "").toLowerCase().includes(q) ||
-          String(l.type || "").toLowerCase().includes(q) ||
-          String(l.id || "").toLowerCase().includes(q))
+      if (!l) return false;
+
+      const matchesSearch = !q || (
+        String(l.name || "").toLowerCase().includes(q) ||
+        String(l.type || "").toLowerCase().includes(q) ||
+        String(l.id || "").toLowerCase().includes(q)
       );
+
+      const matchesType = !typeFilter || String(l.type || "") === typeFilter;
+
+      return matchesSearch && matchesType;
     });
-  }, [search, tree]);
+  }, [search, tree, activeFilters]);
 
   function startCreate(parentId?: string) {
     setEditingId(null);
@@ -281,9 +296,16 @@ export default function LocationManagementPage() {
         </div>
         <div className="flex gap-2">
           <button onClick={refresh} className="p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50">🔄</button>
-          <button onClick={() => startCreate()} className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-black">
-            Add Root Location
-          </button>
+          <FilterDropdown
+            filters={filterConfigs}
+            onApply={(filters) => setActiveFilters(filters)}
+          >
+            {(activeFilters) => (
+              <button onClick={() => startCreate()} className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-black">
+                Add Root Location
+              </button>
+            )}
+          </FilterDropdown>
         </div>
       </div>
 
@@ -382,8 +404,18 @@ export default function LocationManagementPage() {
           placeholder="Search by name, type, id..."
           className="px-4 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm text-slate-700 outline-none w-[360px]"
         />
-        <div className="text-sm font-bold text-slate-600">
-          {filteredOrdered.length} shown / {locations.length} total
+        <div className="flex items-center gap-3">
+          <div className="text-sm font-bold text-slate-600">
+            {filteredOrdered.length} shown / {locations.length} total
+          </div>
+          {activeFilters.type && (
+            <button
+              onClick={() => setActiveFilters({})}
+              className="text-xs text-slate-500 hover:text-slate-700 underline"
+            >
+              Clear filter
+            </button>
+          )}
         </div>
       </div>
 

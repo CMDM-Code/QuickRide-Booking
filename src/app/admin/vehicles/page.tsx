@@ -1,15 +1,15 @@
 'use client';
 import { useEffect, useMemo, useState } from "react";
 import { db } from "@/lib/firebase";
-import { 
-  collection, 
-  getDocs, 
+import {
+  collection,
+  getDocs,
   query,
   where,
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
   serverTimestamp,
   Timestamp
 } from "firebase/firestore";
@@ -17,6 +17,7 @@ import { Vehicle, CarType, PricingSheet } from "@/lib/types";
 import { titleFromId } from "@/lib/pricing";
 import { adminStore } from "@/lib/admin-store";
 import { withTimeout } from "@/lib/api-utils";
+import { FilterDropdown, FilterConfig, ActiveFilters } from "@/components/ui/FilterDropdown";
 
 function toDate(v: any): Date | null {
   if (!v) return null;
@@ -38,10 +39,10 @@ export default function VehicleManagementPage() {
 
   // Filters
   const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
   const [filterAvailable, setFilterAvailable] = useState<'all' | 'available' | 'unavailable'>('all');
   const [availFrom, setAvailFrom] = useState('');
   const [availTo, setAvailTo] = useState('');
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [newVehicle, setNewVehicle] = useState({
     name: '',
     car_type_id: '',
@@ -150,7 +151,8 @@ export default function VehicleManagementPage() {
 
   const vehiclesFiltered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const tf = filterType;
+    const tf = activeFilters.carType as string || 'all';
+    const availFilter = activeFilters.availability as string || filterAvailable;
     const from = availFrom ? new Date(`${availFrom}T00:00:00`) : null;
     const to = availTo ? new Date(`${availTo}T23:59:59`) : null;
 
@@ -169,8 +171,8 @@ export default function VehicleManagementPage() {
     const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) => aStart < bEnd && aEnd > bStart;
 
     return vehicles.filter((v) => {
-      if (filterAvailable !== 'all') {
-        const want = filterAvailable === 'available';
+      if (availFilter !== 'all') {
+        const want = availFilter === 'available';
         if (Boolean(v.available) !== want) return false;
       }
 
@@ -192,7 +194,7 @@ export default function VehicleManagementPage() {
 
       return true;
     });
-  }, [vehicles, bookings, search, filterType, filterAvailable, availFrom, availTo]);
+  }, [vehicles, bookings, search, activeFilters, filterAvailable, availFrom, availTo]);
 
   const uniqueTypeIds = useMemo(() => {
     const set = new Set<string>();
@@ -201,6 +203,23 @@ export default function VehicleManagementPage() {
     }
     return Array.from(set).sort();
   }, [vehicles]);
+
+  const filterConfigs: FilterConfig[] = [
+    {
+      key: 'carType',
+      label: 'Car Type',
+      options: uniqueTypeIds.map(id => ({ value: id, label: id }))
+    },
+    {
+      key: 'availability',
+      label: 'Availability',
+      options: [
+        { value: 'all', label: 'All' },
+        { value: 'available', label: 'Available' },
+        { value: 'unavailable', label: 'Unavailable' }
+      ]
+    }
+  ];
 
   const handleCreateVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -308,8 +327,8 @@ export default function VehicleManagementPage() {
             <p className="text-slate-600">Add and manage your car inventory. {mode === 'local' && '(Syncing disabled in Local Mode)'}</p>
           </div>
           <div className="flex gap-3">
-             <button 
-              onClick={fetchData} 
+             <button
+              onClick={fetchData}
               className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all"
               title="Refresh Connection"
              >
@@ -321,53 +340,35 @@ export default function VehicleManagementPage() {
                placeholder="Search vehicle, type..."
                className="px-4 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm text-slate-700 outline-none w-[260px]"
              />
-             <button 
-              onClick={() => {
-                  setEditingVehicleId(null);
-                  setNewVehicle({
-                      name: '',
-                      car_type_id: carTypes[0]?.id || '',
-                      year: new Date().getFullYear().toString(),
-                      seats: 5,
-                      transmission: 'Automatic',
-                      image_url: '',
-                      available: true
-                  });
-                  setShowCreateForm(!showCreateForm);
-              }}
-              className="px-6 py-3 bg-green-700 hover:bg-green-800 text-white rounded-xl font-bold shadow-lg transition-all"
+             <FilterDropdown
+               filters={filterConfigs}
+               onApply={(filters) => setActiveFilters(filters)}
              >
-               {showCreateForm ? 'Cancel' : 'Add New Vehicle'}
-             </button>
+               {(activeFilters) => (
+                 <button
+                  onClick={() => {
+                      setEditingVehicleId(null);
+                      setNewVehicle({
+                          name: '',
+                          car_type_id: carTypes[0]?.id || '',
+                          year: new Date().getFullYear().toString(),
+                          seats: 5,
+                          transmission: 'Automatic',
+                          image_url: '',
+                          available: true
+                      });
+                      setShowCreateForm(!showCreateForm);
+                  }}
+                  className="px-6 py-3 bg-green-700 hover:bg-green-800 text-white rounded-xl font-bold shadow-lg transition-all"
+                 >
+                   {showCreateForm ? 'Cancel' : 'Add New Vehicle'}
+                 </button>
+               )}
+             </FilterDropdown>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
-          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Car type</p>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-sm bg-white"
-            >
-              <option value="all">All</option>
-              {uniqueTypeIds.map((id) => (
-                <option key={id} value={id}>{id}</option>
-              ))}
-            </select>
-          </div>
-          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Availability flag</p>
-            <select
-              value={filterAvailable}
-              onChange={(e) => setFilterAvailable(e.target.value as any)}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-sm bg-white"
-            >
-              <option value="all">All</option>
-              <option value="available">Available</option>
-              <option value="unavailable">Unavailable</option>
-            </select>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
           <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm lg:col-span-2">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Available between (no booking overlap)</p>
             <div className="flex gap-2">
@@ -384,7 +385,7 @@ export default function VehicleManagementPage() {
             <button
               onClick={() => {
                 setSearch('');
-                setFilterType('all');
+                setActiveFilters({});
                 setFilterAvailable('all');
                 setAvailFrom('');
                 setAvailTo('');

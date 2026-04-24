@@ -1,13 +1,13 @@
 'use client';
 import { useEffect, useMemo, useState } from "react";
 import { db } from "@/lib/firebase";
-import { 
-  collection, 
-  getDocs, 
-  query, 
-  orderBy, 
-  updateDoc, 
-  doc, 
+import {
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  updateDoc,
+  doc,
   getDoc,
   Timestamp
 } from "firebase/firestore";
@@ -17,6 +17,7 @@ import { createNotification } from "@/lib/notification-service";
 import { fetchStaffMembers, assignBookingToStaff } from "@/lib/staff-service";
 import { Profile } from "@/lib/types";
 import { authClient } from "@/lib/auth-client";
+import { FilterDropdown, FilterConfig, ActiveFilters } from "@/components/ui/FilterDropdown";
 import { User, ShieldCheck, UserPlus } from "lucide-react";
 
 type BookingSort =
@@ -42,7 +43,6 @@ export default function BookingManagementPage() {
   const [loading, setLoading] = useState(true);
   const [isAssigning, setIsAssigning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [mode, setMode] = useState<'cloud' | 'local'>('cloud');
   const [search, setSearch] = useState('');
   const [bookingFrom, setBookingFrom] = useState(''); // start_date >=
@@ -51,6 +51,22 @@ export default function BookingManagementPage() {
   const [acctTo, setAcctTo] = useState('');           // profile.created_at <=
   const [carQuery, setCarQuery] = useState('');       // type/model/id
   const [sort, setSort] = useState<BookingSort>('created_desc');
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
+
+  const filterConfigs: FilterConfig[] = [
+    {
+      key: 'status',
+      label: 'Status',
+      options: [
+        { value: 'all', label: 'All Statuses' },
+        { value: 'pending', label: 'Pending' },
+        { value: 'approved', label: 'Approved' },
+        { value: 'active', label: 'Active' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'cancelled', label: 'Cancelled' }
+      ]
+    }
+  ];
 
   useEffect(() => {
     fetchBookings();
@@ -191,9 +207,10 @@ export default function BookingManagementPage() {
     const toBooking = bookingTo ? new Date(`${bookingTo}T23:59:59`) : null;
     const fromAcct = acctFrom ? new Date(`${acctFrom}T00:00:00`) : null;
     const toAcct = acctTo ? new Date(`${acctTo}T23:59:59`) : null;
+    const statusFilter = activeFilters.status as string || 'all';
 
     const afterFilter = bookings.filter((b) => {
-      if (filterStatus !== 'all' && b.status !== filterStatus) return false;
+      if (statusFilter !== 'all' && b.status !== statusFilter) return false;
 
       if (fromBooking && (!b._startAt || b._startAt < fromBooking)) return false;
       if (toBooking && (!b._startAt || b._startAt > toBooking)) return false;
@@ -262,7 +279,7 @@ export default function BookingManagementPage() {
     });
 
     return sorted;
-  }, [bookings, filterStatus, search, bookingFrom, bookingTo, acctFrom, acctTo, carQuery, sort]);
+  }, [bookings, activeFilters, search, bookingFrom, bookingTo, acctFrom, acctTo, carQuery, sort]);
 
   if (loading) {
     return (
@@ -294,31 +311,26 @@ export default function BookingManagementPage() {
               placeholder="Search customer, booking id, vehicle..."
               className="px-4 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm text-slate-700 outline-none w-[260px]"
             />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-6 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm text-slate-600 focus:ring-2 focus:ring-green-500/20 outline-none"
+            <FilterDropdown
+              filters={filterConfigs}
+              onApply={(filters) => setActiveFilters(filters)}
             >
-              <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as BookingSort)}
-              className="px-6 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm text-slate-600 focus:ring-2 focus:ring-green-500/20 outline-none"
-              title="Sort after filters"
-            >
-              <option value="created_desc">Most recent booking</option>
-              <option value="upcoming_start_asc">Nearest upcoming booking date</option>
-              <option value="active_recent_desc">Most recent active booking</option>
-              <option value="cancelled_recent_desc">Most recent cancellation</option>
-              <option value="created_asc">Earliest booking (first-come)</option>
-              <option value="due_soon_asc">Due date (ending soonest)</option>
-            </select>
+              {(activeFilters) => (
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as BookingSort)}
+                  className="px-6 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm text-slate-600 focus:ring-2 focus:ring-green-500/20 outline-none"
+                  title="Sort after filters"
+                >
+                  <option value="created_desc">Most recent booking</option>
+                  <option value="upcoming_start_asc">Nearest upcoming booking date</option>
+                  <option value="active_recent_desc">Most recent active booking</option>
+                  <option value="cancelled_recent_desc">Most recent cancellation</option>
+                  <option value="created_asc">Earliest booking (first-come)</option>
+                  <option value="due_soon_asc">Due date (ending soonest)</option>
+                </select>
+              )}
+            </FilterDropdown>
           </div>
         </div>
 
@@ -359,7 +371,7 @@ export default function BookingManagementPage() {
                 setBookingTo('');
                 setAcctFrom('');
                 setAcctTo('');
-                setFilterStatus('all');
+                setActiveFilters({});
                 setSort('created_desc');
               }}
               className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200"

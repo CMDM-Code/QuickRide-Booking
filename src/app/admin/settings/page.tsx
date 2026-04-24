@@ -13,6 +13,8 @@ interface SystemSettings {
   lateFeeHourlyNote: string;
   lateFeeFlat: number;
   lateFeePercent: number;
+  sessionTimeoutMinutes: number;
+  pricingBehaviorMode: 'locked' | 'recalculated';
 }
 
 const DEFAULT_SETTINGS: SystemSettings = {
@@ -27,6 +29,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
   lateFeeHourlyNote: 'Charges +1hr worth of rental cost per hour late, rounded up.',
   lateFeeFlat: 500,
   lateFeePercent: 15,
+  sessionTimeoutMinutes: 120,
+  pricingBehaviorMode: 'locked',
 };
 
 const getSettings = (): SystemSettings => {
@@ -121,6 +125,85 @@ export default function SystemSettingsPage() {
               <option value="EUR">EUR (€) — Euro</option>
               <option value="GBP">GBP (£) — British Pound</option>
             </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Session & Security Settings */}
+      <div className="card border-2 border-blue-100 shadow-xl">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center shadow-inner">
+            <span className="text-blue-700 text-xl">🔐</span>
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-900 leading-tight">Session & Security</h2>
+            <p className="text-sm text-slate-500 font-medium">Configure session timeout and security settings.</p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Session Timeout (minutes)</label>
+            <input
+              type="number"
+              min="15"
+              max="480"
+              value={settings.sessionTimeoutMinutes}
+              onChange={(e) => update('sessionTimeoutMinutes', Math.max(15, Math.min(480, parseInt(e.target.value) || 120)))}
+              className="w-full max-w-xs px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
+            />
+            <p className="text-xs text-slate-400 mt-1">Auto-logout after inactivity. Min: 15 min, Max: 480 min (8 hours). Default: 120 min (2 hours).</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Pricing Behavior Mode</label>
+            <div className="space-y-3">
+              <label
+                className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  settings.pricingBehaviorMode === 'locked'
+                    ? 'border-green-500 bg-green-50/50'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="pricingBehaviorMode"
+                  value="locked"
+                  checked={settings.pricingBehaviorMode === 'locked'}
+                  onChange={() => update('pricingBehaviorMode', 'locked')}
+                  className="mt-1 accent-green-700"
+                />
+                <div className="flex-1">
+                  <p className="font-bold text-slate-900">🔒 Locked Pricing</p>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Full price breakdown is stored at booking time and <span className="font-bold">does not change</span> even if pricing rules change later.
+                  </p>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  settings.pricingBehaviorMode === 'recalculated'
+                    ? 'border-green-500 bg-green-50/50'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="pricingBehaviorMode"
+                  value="recalculated"
+                  checked={settings.pricingBehaviorMode === 'recalculated'}
+                  onChange={() => update('pricingBehaviorMode', 'recalculated')}
+                  className="mt-1 accent-green-700"
+                />
+                <div className="flex-1">
+                  <p className="font-bold text-slate-900">🔄 Recalculated Pricing</p>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Pricing is <span className="font-bold">dynamically updated</span> based on current pricing rules, even after booking is confirmed.
+                  </p>
+                </div>
+              </label>
+            </div>
           </div>
         </div>
       </div>

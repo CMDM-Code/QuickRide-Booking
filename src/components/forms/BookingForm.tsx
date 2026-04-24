@@ -20,6 +20,7 @@ import { buildLocationsIndex, resolveRatesForLocation } from "@/lib/pricing";
 import { applyScheduleAdjustment, normalizeSchedule, pickActiveSchedule, type PricingSchedule } from "@/lib/schedules";
 import { DEFAULT_BOOKING_FORM_CONFIG, normalizeBookingFormConfig } from "@/lib/booking-form-config";
 import { logSystemError } from "@/lib/error-service";
+import { getPricingBehaviorMode, shouldStorePriceAtBookingTime } from "@/lib/settings-service";
 import { format, isValid, differenceInHours } from "date-fns";
 import { MOCK_LOCATIONS, MOCK_VEHICLES, MOCK_RATES } from "@/lib/mock-data";
 import { AlertCircle, CheckCircle2, Info, RefreshCw } from "lucide-react";
@@ -392,12 +393,33 @@ export default function BookingForm() {
         return;
       }
 
+      const pricingMode = getPricingBehaviorMode();
+      const priceBreakdown = shouldStorePriceAtBookingTime() ? {
+        baseTotal: pricing.totalPrice - pricing.driverFee,
+        driverFee: pricing.driverFee,
+        totalHours: pricing.totalHours,
+        blocks24h: pricing.blocks24h,
+        blocks12h: pricing.blocks12h,
+        extraHours: pricing.extraHours,
+        hourlyRate: pricingMeta.hourlyRate,
+        rate12h: pricing.baseRate12hr,
+        rate24h: pricing.baseRate24hr,
+        matchedLocationId: 'loc_gensan',
+        matchedLocationName: 'General Santos City',
+        carTypeId: selectedVehicle?.car_type_id || '',
+        carTypeName: selectedVehicle?.car_type?.name || '',
+        scheduledPriceApplied: false,
+        calculatedAt: new Date().toISOString()
+      } : null;
+
       const bookingDoc = await addDoc(collection(db, 'bookings'), {
         user_id: user.id,
         car_id: selectedVehicleId,
         start_date: Timestamp.fromDate(new Date(`${startDate}T${startTime}`)),
         end_date: Timestamp.fromDate(new Date(`${endDate}T${endTime}`)),
         total_price: pricing.totalPrice,
+        price_mode: pricingMode,
+        price_breakdown: priceBreakdown,
         status: 'pending',
         specific_address: (formConfig.fields.specific_address?.enabled ?? true) ? specificAddress : '',
         custom_fields: customFields,
