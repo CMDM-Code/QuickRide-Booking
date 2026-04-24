@@ -142,6 +142,7 @@ function calcPrice(
   total: number;
   days: number;
   ratePerDay: number;
+  durationLabel: string;
 } {
   const startMs = details.startDate && details.startTime 
     ? new Date(`${details.startDate}T${details.startTime}`).getTime() 
@@ -150,12 +151,14 @@ function calcPrice(
     ? new Date(`${details.endDate}T${details.endTime}`).getTime() 
     : startMs + 86400000;
   
-  const diffHours = (endMs - startMs) / (1000 * 60 * 60);
-  const days = Math.max(1, Math.ceil(diffHours / 24));
+  const diffMinutes = Math.max(0, (endMs - startMs) / (1000 * 60));
+  const totalHours = Math.ceil(diffMinutes / 60);
+  
+  const blocks24h = Math.floor(totalHours / 24);
+  const remainderHours = totalHours % 24;
   
   // Find location IDs for the destinations
   const locationIds = destinations.map(d => {
-    // Try to find by city name first, then province
     const loc = locations.find(l => 
       l.name?.toLowerCase().includes(d.city?.toLowerCase()) || 
       l.name?.toLowerCase().includes(d.province?.toLowerCase())
@@ -163,7 +166,9 @@ function calcPrice(
     return loc?.id;
   }).filter(Boolean);
 
-  let ratePerDay = 0;
+  let rate24h = 0;
+  let rate12h = 0;
+  let rateHourly = 200; // Default fallback
   
   // 1. Try Pricing Sheets (Regional Pricing)
   if (car.car_type_id && pricingSheets.length > 0) {
@@ -171,35 +176,75 @@ function calcPrice(
     if (sheet && sheet.rates) {
       const sheetRates = sheet.rates;
       
-      // If we have locations, find the highest rate among them
+      const resolveRate = (locId: string) => {
+        const r = sheetRates[locId];
+        return {
+          r24: r?.rate_24hr || r?.["24h"] || 0,
+          r12: r?.rate_12hr || r?.["12h"] || 0,
+          rh: r?.rate_hourly || r?.["hourly"] || 200
+        };
+      };
+
       if (locationIds.length > 0) {
-        let maxRate = 0;
         for (const locId of locationIds) {
-          const locRate = sheetRates[locId]?.rate_24hr || sheetRates[locId]?.["24h"];
-          if (locRate && locRate > maxRate) maxRate = locRate;
+          const { r24, r12, rh } = resolveRate(locId);
+          if (r24 > rate24h) {
+            rate24h = r24;
+            rate12h = r12 || r24 * 0.6; // Fallback if 12h not set
+            rateHourly = rh;
+          }
         }
-        if (maxRate > 0) ratePerDay = maxRate;
       }
       
-      // Fallback to default in sheet if no location match
-      if (ratePerDay === 0) {
-        ratePerDay = sheetRates["default"]?.rate_24hr || sheetRates["default"]?.["24h"] || 0;
+      if (rate24h === 0) {
+        const { r24, r12, rh } = resolveRate("default");
+        rate24h = r24;
+        rate12h = r12 || r24 * 0.6;
+        rateHourly = rh;
       }
     }
   }
 
-  // 2. Fallback to PricingRates (Legacy/Flattened)
-  if (ratePerDay === 0) {
+  // 2. Fallback to PricingRates or Vehicle Base
+  if (rate24h === 0) {
     const rate = rates.find(r => r.car_type_id === car.car_type_id);
-    ratePerDay = rate ? (rate.rate_24hr || car.pricePerDay || 4000) : (car.pricePerDay || 4000);
+    rate24h = rate ? (rate.rate_24hr || car.pricePerDay || 4000) : (car.pricePerDay || 4000);
+    rate12h = rate ? (rate.rate_12hr || rate24h * 0.6) : rate24h * 0.6;
   }
   
-  const baseCost = ratePerDay * days;
+  // Granular Calculation Logic
+  let remainderCost = 0;
+  if (remainderHours > 12) {
+    // 12h price + hourly for extra
+    remainderCost = rate12h + Math.min((remainderHours - 12) * rateHourly, rate24h - rate12h);
+  } else {
+    // Hourly capped at 12h price
+    remainderCost = Math.min(remainderHours * rateHourly, rate12h);
+  }
+
+  const baseCost = (blocks24h * rate24h) + remainderCost;
   const driverFee = details.professionalDriver === 'yes' ? 1000 : 0;
   const routeFee = Math.max(0, destinations.length - 1) * 300;
   
-  return { baseCost, driverFee, routeFee, total: baseCost + driverFee + routeFee, days, ratePerDay };
+  // For display purposes, 'days' is now 24h blocks + fractional remainder
+  const displayDays = blocks24h + (remainderHours > 0 ? (remainderHours > 12 ? 1 : 0.5) : 0);
+  
+  const labelParts = [];
+  if (blocks24h > 0) labelParts.push(`${blocks24h} Day${blocks24h > 1 ? 's' : ''}`);
+  if (remainderHours > 0) labelParts.push(`${remainderHours} Hr${remainderHours > 1 ? 's' : ''}`);
+  const durationLabel = labelParts.join(', ') || '0 Hrs';
+
+  return { 
+    baseCost, 
+    driverFee, 
+    routeFee, 
+    total: baseCost + driverFee + routeFee, 
+    days: totalHours / 24, 
+    ratePerDay: rate24h,
+    durationLabel
+  };
 }
+
 
 function formatCurrency(n: number) {
   return '₱' + n.toLocaleString('en-PH');
@@ -890,7 +935,7 @@ function ConfirmationStage({
                   <div className="flex justify-between items-end border-b border-white/10 pb-3">
                      <div>
                         <p className="text-slate-300">{car.name}</p>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-0.5">{pricing.days} Day{pricing.days > 1 ? 's' : ''} Rental</p>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-0.5">{pricing.durationLabel} Rental</p>
                      </div>
                      <span>{formatCurrency(pricing.baseCost)}</span>
                   </div>
