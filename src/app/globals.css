@@ -3,19 +3,19 @@
 
 @layer base {
   :root {
-    --background: #f8fafc;
-    --foreground: #0f172a;
-    --card: #ffffff;
-    --card-foreground: #0f172a;
-    --primary: var(--primary-brand, #15803d);
+    --background: var(--bg-primary, #f8fafc);
+    --foreground: var(--text-primary, #0f172a);
+    --card: var(--bg-secondary, #ffffff);
+    --card-foreground: var(--text-primary, #0f172a);
+    --primary: var(--color-primary, #15803d);
     --primary-foreground: #ffffff;
-    --secondary: var(--secondary-brand, #0f172a);
+    --secondary: var(--color-secondary, #0f172a);
     --secondary-foreground: #ffffff;
-    --accent: #4ade80;
+    --accent: var(--color-accent, #4ade80);
     --accent-foreground: #0f172a;
-    --muted: #f1f5f9;
-    --muted-foreground: #64748b;
-    --border: #f1f5f9;
+    --muted: var(--bg-tertiary, #f1f5f9);
+    --muted-foreground: var(--text-tertiary, #64748b);
+    --border: var(--border-subtle, #f1f5f9);
     --radius: 0.75rem;
     --font-heading: var(--font-manrope), sans-serif;
     --font-body: var(--font-inter), sans-serif;
@@ -27,6 +27,11 @@
     color: var(--foreground);
   }
 
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-manrope), sans-serif;
   }
@@ -34,15 +39,23 @@
 
 @layer components {
   .card {
-    @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-6 transition-all hover:shadow-md;
+    @apply rounded-2xl shadow-sm border p-6 transition-all hover:shadow-md;
+    background-color: var(--bg-secondary, white);
+    border-color: var(--border-subtle, #e2e8f0);
   }
-  
+
   .card-hover {
-    @apply hover:shadow-md hover:border-slate-200 transition-all duration-200;
+    @apply transition-all duration-200;
+    border-color: var(--border-default, #cbd5e1);
   }
-  
+  .card-hover:hover {
+    box-shadow: var(--shadow-md);
+  }
+
   .stat-card {
-    @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-6 transition-all hover:shadow-md h-full;
+    @apply rounded-2xl shadow-sm border p-6 transition-all hover:shadow-md h-full;
+    background-color: var(--bg-secondary, white);
+    border-color: var(--border-subtle, #e2e8f0);
   }
 
   .sidebar-item {
@@ -50,19 +63,33 @@
   }
 
   .sidebar-item-active {
-    @apply bg-green-700 text-white shadow-lg shadow-green-700/20;
+    @apply text-white shadow-lg;
+    background-color: var(--color-primary, #15803d);
   }
 
   .sidebar-item-inactive {
-    @apply text-slate-600 hover:bg-slate-100;
+    color: var(--text-secondary, #64748b);
+  }
+  .sidebar-item-inactive:hover {
+    background-color: var(--bg-tertiary, #f1f5f9);
   }
 
   .btn-primary {
-    @apply bg-green-700 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-green-800 transition-all shadow-sm hover:shadow;
+    @apply text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm hover:shadow;
+    background-color: var(--color-primary, #15803d);
+  }
+  .btn-primary:hover {
+    filter: brightness(0.9);
   }
 
   .btn-secondary {
-    @apply bg-white text-slate-700 border border-slate-300 px-5 py-2.5 rounded-xl font-medium hover:bg-slate-50 transition-all;
+    @apply px-5 py-2.5 rounded-xl font-medium transition-all;
+    background-color: var(--bg-secondary, white);
+    color: var(--text-secondary, #475569);
+    border: 1px solid var(--border-default, #cbd5e1);
+  }
+  .btn-secondary:hover {
+    background-color: var(--bg-tertiary, #f1f5f9);
   }
 
   .badge {
@@ -70,19 +97,23 @@
   }
 
   .badge-success {
-    @apply bg-green-100 text-green-800;
+    background-color: var(--color-success-light, #dcfce7);
+    color: var(--color-success, #166534);
   }
 
   .badge-info {
-    @apply bg-blue-100 text-blue-800;
+    background-color: var(--color-info-light, #dbeafe);
+    color: var(--color-info, #1e40af);
   }
 
   .badge-warning {
-    @apply bg-amber-100 text-amber-800;
+    background-color: var(--color-warning-light, #fef3c7);
+    color: var(--color-warning, #92400e);
   }
 
   .badge-neutral {
-    @apply bg-slate-100 text-slate-800;
+    background-color: var(--bg-tertiary, #f1f5f9);
+    color: var(--text-secondary, #475569);
   }
 
   /* Figma UI Custom Utilities */
@@ -94,11 +125,23 @@
     border-radius: 2rem;
   }
 
+  .shadow-premium {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+  }
+
+  .shadow-elite {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
   .shadow-3xl {
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
   }
 
   .glass-effect {
-    @apply bg-white/80 backdrop-blur-md border border-white/20;
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-sm;
+  }
+
+  .glass-dark {
+    @apply bg-slate-900/70 backdrop-blur-xl border border-white/10 shadow-xl;
   }
 }

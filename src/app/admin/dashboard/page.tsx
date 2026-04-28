@@ -1,154 +1,356 @@
 'use client';
-import { useEffect, useState } from "react";
-import { fetchGlobalStats, fetchRecentActivity, DashboardStats } from "@/lib/dashboard-utils";
-import { subscribeToNotifications } from "@/lib/notification-service";
-import { Notification } from "@/lib/types";
 
+import { useEffect, useState, useCallback } from 'react';
+import { fetchGlobalStats, fetchRecentActivity, DashboardStats } from '@/lib/dashboard-utils';
+import { subscribeToNotifications } from '@/lib/notification-service';
+import { db } from '@/lib/firebase';
+import { collection, query, where, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
+import { Notification } from '@/lib/types';
+import Link from 'next/link';
+import { Card, StatCard, CardHeader, InfoCard } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { PageHeader, StatsGrid, ContentGrid } from '@/components/layout/DashboardShell';
+import {
+  TrendingUp, Users, Car, ClipboardList, ArrowRight,
+  CheckCircle, Clock, Activity, Bell, Zap, RefreshCw,
+  AlertCircle, ChevronRight
+} from 'lucide-react';
+
+interface PendingBooking {
+  id: string;
+  user_name?: string;
+  vehicle_name?: string;
+  start_date: string;
+  end_date: string;
+  total_price: number;
+  created_at: any;
+}
+
+/**
+ * Admin Dashboard - Huashu Design
+ * 
+ * Clean, minimalist layout with:
+ * - High whitespace
+ * - Subtle depth (shadows)
+ * - Forest green + amber accent
+ * - Clear information hierarchy
+ */
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [pending, setPending] = useState<PendingBooking[]>([]);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true); else setRefreshing(true);
+    const [s, a] = await Promise.all([fetchGlobalStats(), fetchRecentActivity()]);
+    setStats(s);
+    setActivities(a);
+
+    if (db) {
+      try {
+        const pSnap = await getDocs(query(
+          collection(db, 'bookings'),
+          where('status', '==', 'pending'),
+          orderBy('created_at', 'desc'),
+          limit(5)
+        ));
+        setPending(pSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+
+        const allSnap = await getDocs(collection(db, 'bookings'));
+        const counts: Record<string, number> = {};
+        allSnap.docs.forEach(d => {
+          const st = d.data().status || 'unknown';
+          counts[st] = (counts[st] || 0) + 1;
+        });
+        setStatusCounts(counts);
+      } catch {}
+    }
+    if (!silent) setLoading(false); else setRefreshing(false);
+  }, []);
 
   useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      const [s, a] = await Promise.all([
-        fetchGlobalStats(),
-        fetchRecentActivity()
-      ]);
-      setStats(s);
-      setActivities(a);
-      setLoading(false);
-    }
     loadData();
-
-    // Subscribe to admin notifications
-    const unsubscribe = subscribeToNotifications('admin', (data) => {
-      setNotifications(data);
-    });
-
-    return () => unsubscribe();
-  }, []);
+    const unsub = subscribeToNotifications('admin', setNotifications);
+    return () => unsub();
+  }, [loadData]);
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
-        <p className="text-slate-500 font-medium animate-pulse">Calculating Real-Time Metrics...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary-700)]" />
+        <p className="text-[var(--text-tertiary)] font-medium text-sm animate-pulse">
+          Loading dashboard data…
+        </p>
       </div>
     );
   }
 
-  const statCards = [
-    { label: "Total Revenue", value: `₱${stats?.totalRevenue.toLocaleString()}`, icon: "💰", change: stats?.revenueChange, color: "green" },
-    { label: "Active Users", value: stats?.activeUsers.toLocaleString(), icon: "👤", change: stats?.usersChange, color: "blue" },
-    { label: "Active Rentals", value: stats?.activeRentals.toLocaleString(), icon: "🚗", change: stats?.rentalsChange, color: "violet" },
-    { label: "Total Bookings", value: stats?.totalBookings.toLocaleString(), icon: "📋", change: stats?.bookingsChange, color: "amber" },
+  const total = Object.values(statusCounts).reduce((a, b) => a + b, 0) || 1;
+  const pipeline = [
+    { key: 'pending', label: 'Pending', color: 'bg-[var(--color-accent-400)]', textColor: 'text-[var(--color-accent-700)]' },
+    { key: 'approved', label: 'Approved', color: 'bg-[var(--color-info)]', textColor: 'text-[var(--color-info)]' },
+    { key: 'active', label: 'Active', color: 'bg-[var(--color-success)]', textColor: 'text-[var(--color-success)]' },
+    { key: 'completed', label: 'Completed', color: 'bg-[var(--text-tertiary)]', textColor: 'text-[var(--text-tertiary)]' },
   ];
 
   return (
-    <>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 leading-tight">Admin Dashboard</h1>
-            <p className="text-slate-600">Analytics and revenue overview based on real-time data.</p>
-          </div>
-          <div className="flex items-center gap-2">
-             <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${stats?.revenueChange === 'Local' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                {stats?.revenueChange === 'Local' ? '⚠ Offline Mode' : '● Cloud Active'}
-             </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {statCards.map((stat, i) => (
-            <div key={i} className="stat-card">
-              <div className="flex items-start justify-between">
-                <div className="p-2.5 bg-slate-50 rounded-xl text-2xl">
-                  {stat.icon}
-                </div>
-                <div className="text-right">
-                  <span className="text-3xl font-bold text-slate-900">{stat.value}</span>
-                  <p className={`text-sm font-medium mt-1 ${
-                    stat.change?.includes('+') ? 'text-green-600' : 
-                    stat.change === 'Local' ? 'text-amber-600 text-xs uppercase font-black' : 
-                    'text-slate-400'
-                  }`}>
-                    {stat.change}
-                  </p>
-                </div>
-              </div>
-              <p className="text-sm text-slate-500 mt-4 font-medium">{stat.label}</p>
+    <div className="space-y-8">
+      {/* Page Header */}
+      <PageHeader
+        title="Command Center"
+        subtitle="Real-time platform overview and key metrics"
+        action={
+          <div className="flex items-center gap-3">
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ${
+              stats?.revenueChange === 'Local' 
+                ? 'bg-[var(--color-warning-light)] text-[var(--color-warning)]' 
+                : 'bg-[var(--color-success-light)] text-[var(--color-success)]'
+            }`}>
+              <Zap className="w-3.5 h-3.5" />
+              {stats?.revenueChange === 'Local' ? 'Offline Mode' : 'Cloud Live'}
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              loading={refreshing}
+              leftIcon={<RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
+              onClick={() => loadData(true)}
+            >
+              Refresh
+            </Button>
+          </div>
+        }
+      />
+
+      {/* Stats Grid */}
+      <StatsGrid columns={4}>
+        <StatCard
+          label="Total Revenue"
+          value={`₱${(stats?.totalRevenue || 0).toLocaleString()}`}
+          change={stats?.revenueChange || '+0%'}
+          changeType={(stats?.revenueChange || '').startsWith('+') ? 'positive' : 'neutral'}
+          icon={<TrendingUp className="w-5 h-5" />}
+        />
+        <StatCard
+          label="Active Users"
+          value={String(stats?.activeUsers || 0)}
+          change={stats?.usersChange || '+0%'}
+          changeType="positive"
+          icon={<Users className="w-5 h-5" />}
+        />
+        <StatCard
+          label="Active Rentals"
+          value={String(stats?.activeRentals || 0)}
+          change={stats?.rentalsChange || '+0%'}
+          changeType="positive"
+          icon={<Car className="w-5 h-5" />}
+        />
+        <StatCard
+          label="Total Bookings"
+          value={String(stats?.totalBookings || 0)}
+          change={stats?.bookingsChange || '+0%'}
+          changeType="positive"
+          icon={<ClipboardList className="w-5 h-5" />}
+        />
+      </StatsGrid>
+
+      {/* Pipeline Card */}
+      <Card variant="elevated" padding="lg">
+        <CardHeader
+          title="Booking Pipeline"
+          subtitle="Current status distribution across all bookings"
+        />
+        
+        {/* Progress Bar */}
+        <div className="flex gap-1 h-2.5 rounded-full overflow-hidden mb-6 bg-[var(--bg-tertiary)]">
+          {pipeline.map(p => (
+            <div
+              key={p.key}
+              className={`${p.color} transition-all duration-500`}
+              style={{ 
+                width: `${((statusCounts[p.key] || 0) / total) * 100}%`,
+                minWidth: statusCounts[p.key] ? '2%' : 0 
+              }}
+            />
           ))}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="card">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 uppercase tracking-widest text-xs opacity-50">Recent System Activity</h2>
-            <div className="space-y-3">
-              {activities.map((activity, i) => (
-                <div key={i} className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-all px-2 rounded-lg">
-                  <div>
-                    <p className="font-bold text-slate-900">{activity.action}</p>
-                    <p className="text-sm text-slate-500 leading-none mt-1">{activity.user}</p>
-                  </div>
-                  <p className="text-xs text-slate-400 font-mono italic">{activity.time}</p>
-                </div>
-              ))}
-              {activities.length === 0 && (
-                <p className="text-center py-10 text-slate-400 italic">No recent activity detected.</p>
-              )}
+        {/* Pipeline Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {pipeline.map(p => (
+            <div key={p.key} className="text-center">
+              <p className="text-2xl font-bold text-[var(--text-primary)]">
+                {statusCounts[p.key] || 0}
+              </p>
+              <div className="flex items-center justify-center gap-1.5 mt-1.5">
+                <span className={`w-2 h-2 rounded-full ${p.color}`} />
+                <p className={`text-xs font-medium ${p.textColor}`}>
+                  {p.label}
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="card">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 uppercase tracking-widest text-xs opacity-50 flex items-center justify-between">
-              <span>System Notifications</span>
-              <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px]">{notifications.filter(n => !n.read).length} New</span>
-            </h2>
-            <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-              {notifications.map((notif, i) => (
-                <div key={notif.id || i} className={`p-4 rounded-xl border transition-all ${notif.read ? 'bg-white border-slate-100' : 'bg-blue-50 border-blue-100 shadow-sm'}`}>
-                  <div className="flex justify-between items-start mb-1">
-                    <p className={`font-bold text-sm ${notif.read ? 'text-slate-700' : 'text-blue-900'}`}>{notif.title}</p>
-                    <span className="text-[10px] text-slate-400 whitespace-nowrap ml-2">
-                      {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  <p className={`text-xs ${notif.read ? 'text-slate-500' : 'text-blue-700/80'}`}>{notif.message}</p>
-                </div>
-              ))}
-              {notifications.length === 0 && (
-                <div className="text-center py-10">
-                  <div className="text-4xl mb-3 opacity-50">📭</div>
-                  <p className="text-slate-400 italic text-sm">No new notifications</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="card">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 uppercase tracking-widest text-xs opacity-50">Revenue Distribution</h2>
-            <div className="h-64 flex flex-col items-center justify-center text-slate-400">
-               <div className="w-full max-w-[200px] aspect-square rounded-full border-[20px] border-slate-100 relative flex items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-[10px] font-black uppercase tracking-widest">Total</p>
-                    <p className="text-lg font-black text-slate-900 truncate px-2 max-w-[150px]">₱{stats?.totalRevenue.toLocaleString()}</p>
-                  </div>
-                  {/* Mock Visual Rings */}
-                  <div className="absolute inset-[-20px] border-[20px] border-l-green-500 border-t-blue-500 border-r-amber-400 border-b-transparent rounded-full rotate-45 opacity-60"></div>
-               </div>
-               <div className="flex gap-4 mt-6">
-                  <div className="flex items-center gap-1 text-[10px]"><span className="w-2 h-2 rounded-full bg-green-500"></span> Economy</div>
-                  <div className="flex items-center gap-1 text-[10px]"><span className="w-2 h-2 rounded-full bg-blue-500"></span> SUV</div>
-                  <div className="flex items-center gap-1 text-[10px]"><span className="w-2 h-2 rounded-full bg-amber-400"></span> Luxury</div>
-               </div>
-            </div>
-          </div>
+          ))}
         </div>
-      </div>
-    </>
+      </Card>
+
+      {/* Main Content Grid */}
+      <ContentGrid
+        sidebar={
+          <div className="space-y-6">
+            {/* Notifications */}
+            <Card variant="elevated" padding="md">
+              <CardHeader
+                title="Notifications"
+                action={
+                  notifications.filter(n => !n.read).length > 0 && (
+                    <span className="bg-[var(--color-info-light)] text-[var(--color-info)] text-xs font-semibold px-2 py-0.5 rounded-full">
+                      {notifications.filter(n => !n.read).length} new
+                    </span>
+                  )
+                }
+              />
+              <div className="space-y-3 max-h-48 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <InfoCard type="info" icon={<CheckCircle className="w-4 h-4" />}>
+                    All caught up! No new notifications.
+                  </InfoCard>
+                ) : (
+                  notifications.slice(0, 5).map((n, i) => (
+                    <div 
+                      key={n.id || i} 
+                      className={`p-3 rounded-lg text-sm ${
+                        n.read 
+                          ? 'bg-[var(--bg-tertiary)]' 
+                          : 'bg-[var(--color-info-light)] border border-[var(--color-info)]/20'
+                      }`}
+                    >
+                      <p className={`font-semibold ${
+                        n.read ? 'text-[var(--text-secondary)]' : 'text-[var(--color-info)]'
+                      }`}>
+                        {n.title}
+                      </p>
+                      <p className={`mt-0.5 text-xs ${
+                        n.read ? 'text-[var(--text-tertiary)]' : 'text-[var(--text-secondary)]'
+                      }`}>
+                        {n.message}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            {/* Recent Activity */}
+            <Card variant="elevated" padding="md">
+              <CardHeader title="Recent Activity" />
+              <div className="space-y-3">
+                {activities.length === 0 ? (
+                  <p className="text-sm text-[var(--text-tertiary)] text-center py-4">
+                    No recent activity
+                  </p>
+                ) : (
+                  activities.slice(0, 6).map((a, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
+                        a.status === 'approved' ? 'bg-[var(--color-info)]' :
+                        a.status === 'active'   ? 'bg-[var(--color-success)]' :
+                        a.status === 'pending'  ? 'bg-[var(--color-warning)]' : 
+                        'bg-[var(--text-tertiary)]'
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[var(--text-primary)] truncate">
+                          {a.action}
+                        </p>
+                        <p className="text-xs text-[var(--text-tertiary)]">
+                          {a.user} · {a.time}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="mt-4 pt-4 border-t border-[var(--border-subtle)]">
+                <Link 
+                  href="/admin/audit-logs" 
+                  className="flex items-center justify-center gap-1 text-xs font-medium text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+                >
+                  View Full Logs <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </Card>
+          </div>
+        }
+      >
+        {/* Pending Approvals */}
+        <Card variant="elevated" padding="lg">
+          <CardHeader
+            title="Pending Approvals"
+            subtitle={`${statusCounts.pending || 0} booking${statusCounts.pending !== 1 ? 's' : ''} awaiting review`}
+            action={
+              <Link href="/admin/bookings">
+                <Button variant="ghost" size="sm" rightIcon={<ChevronRight className="w-4 h-4" />}>
+                  View All
+                </Button>
+              </Link>
+            }
+          />
+          
+          <div className="space-y-3">
+            {pending.length === 0 ? (
+              <div className="py-12 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--color-success-light)] flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-[var(--color-success)]" />
+                </div>
+                <p className="text-[var(--text-secondary)] font-medium">No pending bookings</p>
+                <p className="text-sm text-[var(--text-tertiary)] mt-1">
+                  All bookings have been processed
+                </p>
+              </div>
+            ) : (
+              pending.map(b => {
+                const created = b.created_at instanceof Timestamp 
+                  ? b.created_at.toDate() 
+                  : new Date(b.created_at);
+                return (
+                  <div 
+                    key={b.id} 
+                    className="flex items-center gap-4 p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] hover:border-[var(--color-warning)]/30 transition-all group"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-[var(--color-warning-light)] flex items-center justify-center shrink-0">
+                      <Clock className="w-5 h-5 text-[var(--color-warning)]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
+                        {b.vehicle_name || 'Booking'} 
+                        <span className="text-[var(--text-tertiary)] ml-1">
+                          #{b.id.slice(0, 8).toUpperCase()}
+                        </span>
+                      </p>
+                      <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                        {b.start_date} → {b.end_date} · ₱{(b.total_price || 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs text-[var(--text-tertiary)]">
+                        {created.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    </div>
+                    <Link href={`/admin/bookings?id=${b.id}`}>
+                      <Button size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        Review
+                      </Button>
+                    </Link>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </Card>
+      </ContentGrid>
+    </div>
   );
 }

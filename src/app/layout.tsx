@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Inter } from "next/font/google";
 import "./globals.css";
+import "@/styles/design-tokens.css";
 import { BrandingProvider } from "@/components/providers/BrandingProvider";
 
 const manrope = Manrope({

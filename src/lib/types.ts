@@ -5,6 +5,7 @@ export interface Profile {
   phone: string;
   driving_license: string;
   role: 'customer' | 'staff' | 'admin';
+  loyalty_points?: number;
   created_at: string;
   notification_preferences?: NotificationPreferences;
 }
@@ -74,13 +75,32 @@ export interface BookingInvite {
   created_at: string;
 }
 
+export interface ThemeColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+  background: string;
+  text: string;
+  success: string;
+  warning: string;
+  error: string;
+}
+
+export interface BrandingScope {
+  admin: boolean;
+  staff: boolean;
+  client: boolean;
+  public_pages: boolean;
+}
+
 export interface BrandingConfig {
   system_name: string;
   logo_url: string;
-  theme_colors: {
-    primary: string;
-    secondary: string;
-  };
+  favicon_url?: string;
+  login_background_url?: string;
+  light_theme: ThemeColors;
+  dark_theme: ThemeColors;
+  scope: BrandingScope;
   updated_at?: any;
 }
 

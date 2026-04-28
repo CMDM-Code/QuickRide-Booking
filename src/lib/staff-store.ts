@@ -1,5 +1,12 @@
 'use client';
 
+export interface PriceSnapshot {
+  totalPrice: number;
+  lockedAt: string;
+  pricingMode: 'locked' | 'recalculated';
+  lockedBy: string;
+}
+
 export interface Booking {
   id: string;
   customerName: string;
@@ -11,6 +18,7 @@ export interface Booking {
   totalPrice: number;
   status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
   createdAt: string;
+  priceSnapshot?: PriceSnapshot;
 }
 
 export interface Vehicle {
@@ -43,21 +51,55 @@ export const staffStore = {
     }
   },
 
-  updateBookingStatus: (id: string, status: Booking['status']) => {
+  updateBookingStatus: (id: string, status: Booking['status'], approverId?: string) => {
     const bookings = staffStore.getBookings();
     const index = bookings.findIndex(b => b.id === id);
     if (index !== -1) {
+      const oldStatus = bookings[index].status;
       bookings[index].status = status;
+
+      // Lock price at approval time if pricing mode is 'locked' and transitioning to confirmed
+      if (status === 'confirmed' && oldStatus !== 'confirmed') {
+        const settings = JSON.parse(localStorage.getItem('quickride_full_config_v2') || '{}');
+        const pricingMode = settings?.pricing?.pricing_mode || 'locked';
+
+        if (pricingMode === 'locked' || !bookings[index].priceSnapshot) {
+          bookings[index].priceSnapshot = {
+            totalPrice: bookings[index].totalPrice,
+            lockedAt: new Date().toISOString(),
+            pricingMode: pricingMode,
+            lockedBy: approverId || 'system'
+          };
+        }
+      }
+
       localStorage.setItem('quickride_bookings', JSON.stringify(bookings));
     }
   },
 
-  assignVehicle: (bookingId: string, vehicleId: number) => {
+  assignVehicle: (bookingId: string, vehicleId: number, approverId?: string) => {
     const bookings = staffStore.getBookings();
     const index = bookings.findIndex(b => b.id === bookingId);
     if (index !== -1) {
+      const oldStatus = bookings[index].status;
       bookings[index].vehicleId = vehicleId;
       bookings[index].status = 'confirmed';
+
+      // Lock price at approval time if pricing mode is 'locked' and transitioning to confirmed
+      if (oldStatus !== 'confirmed') {
+        const settings = JSON.parse(localStorage.getItem('quickride_full_config_v2') || '{}');
+        const pricingMode = settings?.pricing?.pricing_mode || 'locked';
+
+        if (pricingMode === 'locked' || !bookings[index].priceSnapshot) {
+          bookings[index].priceSnapshot = {
+            totalPrice: bookings[index].totalPrice,
+            lockedAt: new Date().toISOString(),
+            pricingMode: pricingMode,
+            lockedBy: approverId || 'system'
+          };
+        }
+      }
+
       localStorage.setItem('quickride_bookings', JSON.stringify(bookings));
     }
   },

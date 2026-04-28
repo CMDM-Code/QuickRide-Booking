@@ -32,8 +32,8 @@ export default function Navbar() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-[999] backdrop-blur-lg bg-white/80 border-b border-slate-200/50 shadow-sm">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="fixed top-0 left-0 right-0 z-[999] glass-effect border-b border-white/20">
+      <nav className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="flex items-center justify-between h-16 md:h-20">
           <Link href="/" className="flex items-center space-x-2">
             <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0">

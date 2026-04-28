@@ -2,24 +2,34 @@
 
 import StaffLayout from "../layout";
 import { useEffect, useState } from "react";
-import { Booking, staffStore } from "@/lib/staff-store";
+import { Booking, getLocalBookings, updateBookingStatus } from "@/lib/booking-service";
+import { staffAuth } from "@/lib/staff-auth";
 
 export default function ApprovalsPage() {
   const [pendingBookings, setPendingBookings] = useState<Booking[]>([]);
+  const [staffId, setStaffId] = useState<string>('system');
+  const [processing, setProcessing] = useState<string | null>(null);
 
   useEffect(() => {
-    const allBookings = staffStore.getBookings();
+    const allBookings = getLocalBookings();
     setPendingBookings(allBookings.filter(b => b.status === 'pending'));
+
+    const session = staffAuth.getSession();
+    if (session?.userId) setStaffId(session.userId);
   }, []);
 
-  const handleApprove = (id: string) => {
-    staffStore.updateBookingStatus(id, 'confirmed');
+  const handleApprove = async (id: string) => {
+    setProcessing(id);
+    await updateBookingStatus(id, 'confirmed', staffId);
     setPendingBookings(prev => prev.filter(b => b.id !== id));
+    setProcessing(null);
   };
 
-  const handleReject = (id: string) => {
-    staffStore.updateBookingStatus(id, 'cancelled');
+  const handleReject = async (id: string) => {
+    setProcessing(id);
+    await updateBookingStatus(id, 'cancelled', staffId);
     setPendingBookings(prev => prev.filter(b => b.id !== id));
+    setProcessing(null);
   };
 
   return (

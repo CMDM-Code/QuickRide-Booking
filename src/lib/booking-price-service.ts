@@ -18,7 +18,7 @@ import {
   calculateTotalRental, 
   PricingBreakdown 
 } from "./pricing-engine";
-import { getSystemSettings } from "./settings-service";
+import { getPricingBehaviorMode } from "./settings-service";
 
 /**
  * Recalculates the price for a booking based on current system rules.
@@ -115,9 +115,7 @@ export function getDisplayPrice(
   schedules: PricingSchedule[],
   pricingMeta: PricingMetaType
 ): { price: number; mode: 'locked' | 'live'; schedule?: PricingSchedule | null } {
-  const settings = getSystemSettings();
-  
-  if (settings.pricingBehaviorMode === 'locked') {
+  if (getPricingBehaviorMode() === 'locked') {
     return { price: booking.total_price, mode: 'locked' };
   }
 

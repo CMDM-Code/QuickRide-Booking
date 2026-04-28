@@ -44,6 +44,13 @@ export interface Vehicle {
 // Backwards compatibility adapter
 export type AdminVehicle = Vehicle;
 
+export interface PriceSnapshot {
+  totalAmount: number;
+  lockedAt: string;
+  pricingMode: 'locked' | 'recalculated';
+  lockedBy: string;
+}
+
 export interface Booking {
   id: string;
   userId: string;
@@ -62,6 +69,7 @@ export interface Booking {
   notes: string;
   createdAt: string;
   updatedAt: string;
+  priceSnapshot?: PriceSnapshot;
 }
 
 export interface PricingRule {
@@ -259,14 +267,30 @@ export const adminStore = {
     return newBooking;
   },
 
-  updateBookingStatus: (id: string, status: Booking['status']) => {
+  updateBookingStatus: (id: string, status: Booking['status'], approverId?: string) => {
     const bookings = adminStore.getBookings();
     const index = bookings.findIndex(b => b.id === id);
-    
+
     if (index !== -1) {
       const oldStatus = bookings[index].status;
       bookings[index].status = status;
       bookings[index].updatedAt = new Date().toISOString();
+
+      // Lock price at approval time if pricing mode is 'locked' and transitioning to confirmed
+      if (status === 'confirmed' && oldStatus !== 'confirmed') {
+        const settings = JSON.parse(localStorage.getItem('quickride_full_config_v2') || '{}');
+        const pricingMode = settings?.pricing?.pricing_mode || 'locked';
+
+        if (pricingMode === 'locked' || !bookings[index].priceSnapshot) {
+          bookings[index].priceSnapshot = {
+            totalAmount: bookings[index].totalAmount,
+            lockedAt: new Date().toISOString(),
+            pricingMode: pricingMode,
+            lockedBy: approverId || 'system'
+          };
+        }
+      }
+
       localStorage.setItem('quickride_bookings', JSON.stringify(bookings));
       adminStore.logSecurityEvent('BOOKING_STATUS_CHANGED', `Booking ${id} status changed from ${oldStatus} to ${status}`);
     }
