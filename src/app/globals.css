@@ -144,4 +144,103 @@
   .glass-dark {
     @apply bg-slate-900/70 backdrop-blur-xl border border-white/10 shadow-xl;
   }
+
+  /* ── Payment modal card input styles ── */
+  .payment-input {
+    @apply w-full px-4 py-3 rounded-xl text-sm font-semibold outline-none transition-all;
+    background-color: var(--bg-tertiary);
+    border: 1.5px solid var(--border-default);
+    color: var(--text-primary);
+  }
+  .payment-input:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+  }
+  .payment-input::placeholder {
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  /* ── Tawk.to iframe override ── */
+  #tawkchat-container {
+    border-radius: 1.5rem !important;
+    overflow: hidden !important;
+  }
+}
+
+/* ─────────────────────────────────────
+   Dark Mode – Hardcoded Color Overrides
+   These fix booking flow components that
+   use hardcoded Tailwind slate/white values.
+   ───────────────────────────────────── */
+.dark body,
+@media (prefers-color-scheme: dark) {
+  /* bg-white → bg-secondary */
+  .bg-white {
+    background-color: var(--bg-secondary) !important;
+  }
+
+  /* bg-slate-50, bg-slate-100 → bg-tertiary */
+  .bg-slate-50 {
+    background-color: var(--bg-tertiary) !important;
+  }
+  .bg-slate-100 {
+    background-color: var(--border-subtle) !important;
+  }
+
+  /* text-slate-900 → text-primary */
+  .text-slate-900 {
+    color: var(--text-primary) !important;
+  }
+
+  /* text-slate-700, text-slate-800 → text-secondary */
+  .text-slate-700,
+  .text-slate-800 {
+    color: var(--text-secondary) !important;
+  }
+
+  /* text-slate-500, text-slate-600 → text-tertiary */
+  .text-slate-500,
+  .text-slate-600 {
+    color: var(--text-tertiary) !important;
+  }
+
+  /* border-slate-200 → border-default */
+  .border-slate-200 {
+    border-color: var(--border-default) !important;
+  }
+  .border-slate-100 {
+    border-color: var(--border-subtle) !important;
+  }
+
+  /* Amber status badges in dark mode */
+  .bg-amber-100 {
+    background-color: rgba(251, 191, 36, 0.15) !important;
+  }
+  .text-amber-700 { color: #fbbf24 !important; }
+  .text-amber-800 { color: #fbbf24 !important; }
+
+  /* Blue status badges */
+  .bg-blue-100 {
+    background-color: rgba(96, 165, 250, 0.15) !important;
+  }
+  .text-blue-700 { color: #60a5fa !important; }
+
+  /* Red status badges */
+  .bg-red-100 {
+    background-color: rgba(248, 113, 113, 0.15) !important;
+  }
+  .text-red-500 { color: #f87171 !important; }
+
+  /* Green tints */
+  .bg-green-50 {
+    background-color: rgba(34, 197, 94, 0.08) !important;
+  }
+  .bg-green-100 {
+    background-color: rgba(34, 197, 94, 0.15) !important;
+  }
+  .bg-blue-50 {
+    background-color: rgba(96, 165, 250, 0.08) !important;
+  }
+  .text-blue-800, .text-blue-500 { color: #60a5fa !important; }
 }

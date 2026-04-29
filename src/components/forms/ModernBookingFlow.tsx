@@ -13,6 +13,7 @@ import { PricingRate } from "@/lib/types";
 import { getPricingBehaviorMode, shouldStorePriceAtBookingTime } from "@/lib/settings-service";
 import { MOCK_VEHICLES, MOCK_RATES } from "@/lib/mock-data";
 import { ImageWithFallback } from "../ui/ImageWithFallback";
+import PaymentModal from "@/components/modals/PaymentModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,6 +41,7 @@ interface BookingDetails {
   endDate: string;
   endTime: string;
   professionalDriver: string; // 'yes' | 'no'
+  tripType: string; // 'counter' | 'trip'
 }
 
 interface BookingRequest {
@@ -358,15 +360,13 @@ function CarSelectionStage({
                   <h3 className="font-black text-slate-900 text-xl mb-1 leading-tight" style={{ fontFamily: 'var(--font-heading)' }}>
                     {vehicle.name}
                   </h3>
-                  <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">
-                    <span className="flex items-center gap-1.5"><Users size={12} className="text-green-600" /> {vehicle.seats} SEATS</span>
-                    <span className="flex items-center gap-1.5"><Settings size={12} className="text-green-600" /> {vehicle.transmission}</span>
+                  <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">
+                    <span className="flex items-center gap-1.5"><Car size={12} className="text-green-600" /> {vehicle.type}</span>
                   </div>
                   <div className="flex items-end justify-between">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Starting at</p>
-                      <span className="font-black text-green-700 text-2xl">{formatCurrency(vehicle.pricePerDay)}</span>
-                      <span className="text-[10px] uppercase font-black text-slate-400 ml-1">/ 24HR</span>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100/80 px-2 py-1 rounded-md">{vehicle.seats} SEATS</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100/80 px-2 py-1 rounded-md">{vehicle.transmission}</span>
                     </div>
                     <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-green-700 group-hover:text-white transition-all shadow-inner">
                       <Plus size={20} />
@@ -785,6 +785,27 @@ function BookingDetailsStage({
              </div>
           </div>
 
+          {/* Counter / Trip Type */}
+          <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm">
+             <div className="p-4 bg-slate-50 border-b border-slate-100">
+               <h5 className="text-sm font-bold text-slate-900 flex items-center gap-2"><Settings size={16} className="text-green-700"/> Counter / Trip Type</h5>
+               <p className="text-[10px] uppercase font-bold text-slate-500 mt-1 pl-6">What kind of trip is this?</p>
+             </div>
+             <div className="p-4">
+               <select
+                 value={(details as any).tripType || 'trip'}
+                 onChange={(e) => update('tripType' as any, e.target.value)}
+                 className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 appearance-none outline-none focus:border-green-600"
+               >
+                 <option value="trip">Trip (Point-to-Point)</option>
+                 <option value="counter">Counter (Round Trip / Return)</option>
+                 <option value="multi">Multi-Stop Itinerary</option>
+                 <option value="airport">Airport Transfer</option>
+                 <option value="day">Full Day Disposal</option>
+               </select>
+             </div>
+          </div>
+
           <AnimatePresence mode="popLayout">
             {dateTimeError && (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex items-start gap-3 p-4 bg-red-50 border border-red-100 rounded-2xl">
@@ -1016,23 +1037,15 @@ function BookingSummaryStage({
   onEdit,
   onRemove,
   onBack,
-  onConfirm,
+  onGoToPay,
 }: {
   requests: BookingRequest[];
   onEdit: (id: string) => void;
   onRemove: (id: string) => void;
   onBack: () => void;
-  onConfirm: () => void;
+  onGoToPay: () => void;
 }) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const totalBucketPrice = requests.reduce((acc, req) => acc + req.totalPrice, 0);
-
-  const handleBookNowClick = async () => {
-    setIsSubmitting(true);
-    await onConfirm();
-    setIsSubmitting(false);
-  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col h-full bg-slate-50/50">
@@ -1121,16 +1134,12 @@ function BookingSummaryStage({
             <Plus size={16} /> Add Another Car
           </button>
           <button
-            onClick={handleBookNowClick}
+            onClick={() => onGoToPay()}
             disabled={requests.length === 0 || isSubmitting}
-            className="flex-3 w-full py-4 rounded-2xl text-sm font-bold text-white shadow-xl shadow-green-700/30 hover:bg-green-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none"
+            className="flex-3 w-full py-4 rounded-2xl text-sm font-bold text-white shadow-xl shadow-green-700/30 hover:brightness-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none"
             style={{ background: '#15803d' }}
           >
-            {isSubmitting ? (
-              <span className="animate-pulse">Processing Booking...</span>
-            ) : (
-              <><Check size={18} /> Confirm Entire Booking</>
-            )}
+            <><Check size={18} /> Go to Pay</>
           </button>
         </div>
       </div>
@@ -1161,8 +1170,10 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
   const [selectedCar, setSelectedCar] = useState<Vehicle | null>(null);
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails>({
-     startDate: '', startTime: '', endDate: '', endTime: '', professionalDriver: 'no'
+     startDate: '', startTime: '', endDate: '', endTime: '', professionalDriver: 'no', tripType: 'trip'
   });
+
+  const [showPayment, setShowPayment] = useState(false);
 
   // All completed booking requests
   const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>([]);
@@ -1493,10 +1504,25 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
                onEdit={handleEditRequest}
                onRemove={(id) => setBookingRequests((prev) => prev.filter((r) => r.id !== id))}
                onBack={() => setStage('car')}
-               onConfirm={handleFinalConfirm}
+               onGoToPay={() => setShowPayment(true)}
              />
           ) : null}
        </div>
+
+       {/* Payment Modal */}
+       <AnimatePresence>
+         {showPayment && (
+           <PaymentModal
+             requests={bookingRequests}
+             grandTotal={bookingRequests.reduce((acc, r) => acc + r.totalPrice, 0)}
+             onClose={() => setShowPayment(false)}
+             onPay={async () => {
+               await handleFinalConfirm();
+               setShowPayment(false);
+             }}
+           />
+         )}
+       </AnimatePresence>
     </div>
   );
 }
