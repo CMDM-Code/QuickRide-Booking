@@ -4,36 +4,17 @@ import { useEffect, useRef } from 'react';
 import { MessageCircle, Clock, ShieldCheck, Headphones } from 'lucide-react';
 
 export default function SupportPage() {
-  const scriptLoaded = useRef(false);
-
   useEffect(() => {
-    if (scriptLoaded.current) return;
-    scriptLoaded.current = true;
-
-    // Inject Tawk.to script
-    const Tawk_API: any = (window as any).Tawk_API || {};
-    const Tawk_LoadStart = new Date();
-    (window as any).Tawk_API = Tawk_API;
-    (window as any).Tawk_LoadStart = Tawk_LoadStart;
-
-    const s1 = document.createElement('script');
-    s1.async = true;
-    s1.src = 'https://embed.tawk.to/69f28debfa5a451c37ba84bc/1jndnkoj1';
-    s1.charset = 'UTF-8';
-    s1.setAttribute('crossorigin', '*');
-    document.head.appendChild(s1);
-
-    // When chat loads, maximize it
-    Tawk_API.onLoad = function () {
-      Tawk_API.maximize();
-    };
-
-    return () => {
-      // Cleanup: hide widget on unmount
-      if ((window as any).Tawk_API?.hideWidget) {
-        (window as any).Tawk_API.hideWidget();
+    // Try to maximize the global widget if it's already loaded
+    const checkAndMaximize = setInterval(() => {
+      const api = (window as any).Tawk_API;
+      if (api && api.maximize) {
+        api.maximize();
+        clearInterval(checkAndMaximize);
       }
-    };
+    }, 500);
+
+    return () => clearInterval(checkAndMaximize);
   }, []);
 
   const FEATURES = [

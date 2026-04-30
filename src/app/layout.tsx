@@ -3,6 +3,7 @@ import { Manrope, Inter } from "next/font/google";
 import "./globals.css";
 import "@/styles/design-tokens.css";
 import { BrandingProvider } from "@/components/providers/BrandingProvider";
+import TawkToWidget from "@/components/layout/TawkToWidget";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -34,6 +35,7 @@ export default function RootLayout({
       >
         <BrandingProvider>
           {children}
+          <TawkToWidget />
         </BrandingProvider>
       </body>
     </html>

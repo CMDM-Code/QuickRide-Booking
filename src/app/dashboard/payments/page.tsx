@@ -38,7 +38,7 @@ export default function PaymentsPage() {
           getDocs(query(
             collection(db, 'bookings'), 
             where('user_id', '==', user.id), 
-            where('status', 'in', ['approved', 'paid']),
+            where('status', 'in', ['approved', 'paid', 'pending']),
             orderBy('created_at', 'desc')
           )),
           getDocs(collection(db, 'vehicles'))
@@ -59,7 +59,7 @@ export default function PaymentsPage() {
           };
       });
 
-      setPendingBookings(data.filter(b => b.status === 'approved'));
+      setPendingBookings(data.filter(b => b.status === 'approved' || b.status === 'pending'));
     } catch (err) {
       console.error("Error fetching pending payments:", err);
     } finally {
@@ -121,7 +121,7 @@ export default function PaymentsPage() {
                </div>
             </div>
             <h2 className="text-2xl font-black text-slate-900 mb-2">Yet to be Paid</h2>
-            <p className="text-slate-500 text-sm font-medium mb-8">Requests that have been approved and are awaiting payment.</p>
+            <p className="text-slate-500 text-sm font-medium mb-8">Requests that are awaiting payment.</p>
             
             {loading ? (
                 <div className="py-12 flex justify-center">
@@ -167,7 +167,7 @@ export default function PaymentsPage() {
               <h3 className="text-xl font-black mb-6">Payment Guide</h3>
               <div className="space-y-6">
                  {[
-                   { id: 1, title: 'Check Approval', text: 'Wait for admin status change.' },
+                   { id: 1, title: 'Check Status', text: 'Admin may review your request.' },
                    { id: 2, title: 'Send GCash', text: 'Use the QR code provided in the Pay Now modal.' },
                    { id: 3, title: 'Submit Reference', text: 'Enter the 13-digit GCash ref number.' }
                  ].map(step => (
