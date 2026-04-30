@@ -1038,12 +1038,16 @@ function BookingSummaryStage({
   onRemove,
   onBack,
   onGoToPay,
+  onPayLater,
+  isSubmitting,
 }: {
   requests: BookingRequest[];
   onEdit: (id: string) => void;
   onRemove: (id: string) => void;
   onBack: () => void;
   onGoToPay: () => void;
+  onPayLater: () => void;
+  isSubmitting: boolean;
 }) {
   const totalBucketPrice = requests.reduce((acc, req) => acc + req.totalPrice, 0);
 
@@ -1129,17 +1133,24 @@ function BookingSummaryStage({
              <span className="font-black text-3xl text-slate-900">{formatCurrency(totalBucketPrice)}</span>
           </div>
         )}
-        <div className="flex gap-4">
-          <button onClick={onBack} className="flex-1 max-w-[200px] flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-slate-200 text-slate-700 text-sm font-bold hover:bg-white hover:border-slate-300 transition-all">
-            <Plus size={16} /> Add Another Car
+        <div className="flex flex-col sm:flex-row gap-4">
+          <button onClick={onBack} disabled={isSubmitting} className="flex-1 max-w-[200px] sm:max-w-[160px] flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-slate-200 text-slate-700 text-sm font-bold hover:bg-white hover:border-slate-300 transition-all disabled:opacity-50">
+            <Plus size={16} /> Add Car
+          </button>
+          <button
+            onClick={onPayLater}
+            disabled={requests.length === 0 || isSubmitting}
+            className="flex-2 py-4 rounded-2xl text-sm font-bold text-slate-700 bg-white border-2 border-slate-200 hover:bg-slate-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm"
+          >
+            <Clock size={18} /> {isSubmitting ? 'Processing...' : 'Pay Later'}
           </button>
           <button
             onClick={() => onGoToPay()}
-            disabled={requests.length === 0}
-            className="flex-3 w-full py-4 rounded-2xl text-sm font-bold text-white shadow-xl shadow-green-700/30 hover:brightness-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none"
+            disabled={requests.length === 0 || isSubmitting}
+            className="flex-3 py-4 rounded-2xl text-sm font-bold text-white shadow-xl shadow-green-700/30 hover:brightness-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none"
             style={{ background: '#15803d' }}
           >
-            <><Check size={18} /> Go to Pay</>
+            <><Check size={18} /> Pay Now</>
           </button>
         </div>
       </div>
@@ -1174,6 +1185,7 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
   });
 
   const [showPayment, setShowPayment] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // All completed booking requests
   const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>([]);
@@ -1335,11 +1347,13 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
   }
 
   async function handleFinalConfirm() {
+    setIsSubmitting(true);
     const user = authClient.getCurrentUser();
     
     const firestore = db;
     if (!firestore) {
        alert("Firebase is not initialized.");
+       setIsSubmitting(false);
        return;
     }
 
@@ -1416,6 +1430,8 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
     } catch (error: any) {
       console.error("Error creating bookings:", error);
       alert("Failed to submit booking: " + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -1506,6 +1522,8 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
                onRemove={(id) => setBookingRequests((prev) => prev.filter((r) => r.id !== id))}
                onBack={() => setStage('car')}
                onGoToPay={() => setShowPayment(true)}
+               onPayLater={() => handleFinalConfirm()}
+               isSubmitting={isSubmitting}
              />
           ) : null}
        </div>
