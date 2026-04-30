@@ -173,8 +173,8 @@
    These fix booking flow components that
    use hardcoded Tailwind slate/white values.
    ───────────────────────────────────── */
-.dark body,
-@media (prefers-color-scheme: dark) {
+.dark body {
+
   /* bg-white → bg-secondary */
   .bg-white {
     background-color: var(--bg-secondary) !important;
