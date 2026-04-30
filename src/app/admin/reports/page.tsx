@@ -36,7 +36,7 @@ export default function ReportsAnalyticsPage() {
     
     if (db) {
       try {
-        const bookingsSnap = await withTimeout(getDocs(collection(db, 'bookings')), 5000);
+        const bookingsSnap = await withTimeout(getDocs(collection(db, 'bookings')), 5000) as any;
         const vehsCountSnap = await getCountFromServer(collection(db, 'vehicles'));
         const profilesCountSnap = await getCountFromServer(collection(db, 'profiles'));
 

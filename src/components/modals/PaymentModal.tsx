@@ -102,7 +102,7 @@ export default function PaymentModal({ requests, grandTotal, onClose, onPay }: P
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden">
-          <div className="w-10 h-1 rounded-full bg-[var(--border-default)]" />
+          <div className="w-10 h-1 rounded-full bg-[var(--text-muted)] opacity-20" />
         </div>
 
         {paid ? (

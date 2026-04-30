@@ -1130,12 +1130,12 @@ function BookingSummaryStage({
           </div>
         )}
         <div className="flex gap-4">
-          <button onClick={onBack} disabled={isSubmitting} className="flex-1 max-w-[200px] flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-slate-200 text-slate-700 text-sm font-bold hover:bg-white hover:border-slate-300 transition-all">
+          <button onClick={onBack} className="flex-1 max-w-[200px] flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-slate-200 text-slate-700 text-sm font-bold hover:bg-white hover:border-slate-300 transition-all">
             <Plus size={16} /> Add Another Car
           </button>
           <button
             onClick={() => onGoToPay()}
-            disabled={requests.length === 0 || isSubmitting}
+            disabled={requests.length === 0}
             className="flex-3 w-full py-4 rounded-2xl text-sm font-bold text-white shadow-xl shadow-green-700/30 hover:brightness-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none"
             style={{ background: '#15803d' }}
           >
@@ -1215,7 +1215,8 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
             startTime: start.toTimeString().slice(0,5),
             endDate: end.toISOString().split('T')[0],
             endTime: end.toTimeString().slice(0,5),
-            professionalDriver: existingBooking.with_driver ? 'yes' : 'no'
+            professionalDriver: existingBooking.with_driver ? 'yes' : 'no',
+            tripType: existingBooking.trip_type || 'trip'
          },
          totalPrice: existingBooking.total_price || 0
       }]);
@@ -1298,7 +1299,7 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
   function resetCurrentBooking() {
     setSelectedCar(null);
     setDestinations([]);
-    setBookingDetails({ startDate: '', startTime: '', endDate: '', endTime: '', professionalDriver: 'no' });
+    setBookingDetails({ startDate: '', startTime: '', endDate: '', endTime: '', professionalDriver: 'no', tripType: 'trip' });
     setEditingId(null);
   }
 

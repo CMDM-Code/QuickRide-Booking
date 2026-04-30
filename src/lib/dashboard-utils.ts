@@ -124,7 +124,7 @@ export async function fetchRecentActivity() {
 
     try {
       const q = query(collection(firestore, 'bookings'), orderBy('created_at', 'desc'), limit(8));
-      const snap = await withTimeout(getDocs(q), 3000);
+      const snap = await withTimeout(getDocs(q), 3000) as any;
 
       const activities = await Promise.all(snap.docs.map(async (docRef) => {
           const b = docRef.data();
