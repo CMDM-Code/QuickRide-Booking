@@ -144,4 +144,129 @@
   .glass-dark {
     @apply bg-slate-900/70 backdrop-blur-xl border border-white/10 shadow-xl;
   }
+
+  /* ── Payment modal card input styles ── */
+  .payment-input {
+    @apply w-full px-4 py-3 rounded-xl text-sm font-semibold outline-none transition-all;
+    background-color: var(--bg-tertiary);
+    border: 1.5px solid var(--border-default);
+    color: var(--text-primary);
+  }
+  .payment-input:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+  }
+  .payment-input::placeholder {
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  /* ── Tawk.to iframe override ── */
+  #tawkchat-container {
+    border-radius: 1.5rem !important;
+    overflow: hidden !important;
+  }
+}
+
+/* ─────────────────────────────────────
+   Dark Mode – Hardcoded Color Overrides
+   These fix booking flow components that
+   use hardcoded Tailwind slate/white values.
+   ───────────────────────────────────── */
+.dark body {
+
+  /* bg-white → bg-secondary */
+  .bg-white {
+    background-color: var(--bg-secondary) !important;
+  }
+
+  /* bg-slate-50, bg-slate-100, etc → bg-tertiary/border-subtle */
+  .bg-slate-50 {
+    background-color: var(--bg-tertiary) !important;
+  }
+  .bg-slate-100 {
+    background-color: var(--border-subtle) !important;
+  }
+  .bg-slate-200 {
+    background-color: var(--border-default) !important;
+  }
+  .bg-slate-900 {
+    background-color: var(--color-ink-800) !important;
+  }
+  .bg-slate-950 {
+    background-color: var(--color-ink-950, #020617) !important;
+  }
+
+  /* text-slate-900 → text-primary */
+  .text-slate-900 {
+    color: var(--text-primary) !important;
+  }
+
+  /* text-slate-700, text-slate-800 → text-secondary */
+  .text-slate-700,
+  .text-slate-800 {
+    color: var(--text-secondary) !important;
+  }
+
+  /* text-slate-500, text-slate-600 → text-tertiary */
+  .text-slate-500,
+  .text-slate-600 {
+    color: var(--text-tertiary) !important;
+  }
+
+  /* text-slate-400 → text-muted */
+  .text-slate-400 {
+    color: var(--color-ink-500) !important;
+  }
+
+  /* border-slate-200, border-slate-100 → border-default/subtle */
+  .border-slate-200 {
+    border-color: var(--border-default) !important;
+  }
+  .border-slate-100 {
+    border-color: var(--border-subtle) !important;
+  }
+  .border-slate-300 {
+    border-color: var(--border-strong) !important;
+  }
+
+  /* Amber status badges in dark mode */
+  .bg-amber-100, .bg-amber-50 {
+    background-color: rgba(251, 191, 36, 0.15) !important;
+  }
+  .text-amber-700, .text-amber-800, .text-amber-600 { 
+    color: #fbbf24 !important; 
+  }
+
+  /* Blue status badges */
+  .bg-blue-100, .bg-blue-50 {
+    background-color: rgba(96, 165, 250, 0.15) !important;
+  }
+  .text-blue-700, .text-blue-800, .text-blue-600, .text-blue-500 { 
+    color: #60a5fa !important; 
+  }
+
+  /* Red status badges */
+  .bg-red-100, .bg-red-50 {
+    background-color: rgba(248, 113, 113, 0.15) !important;
+  }
+  .text-red-700, .text-red-800, .text-red-600, .text-red-500 { 
+    color: #f87171 !important; 
+  }
+
+  /* Green status badges */
+  .bg-green-100, .bg-green-50 {
+    background-color: rgba(34, 197, 94, 0.15) !important;
+  }
+  .text-green-700, .text-green-800, .text-green-600 { 
+    color: #4ade80 !important; 
+  }
+
+  /* Hover states */
+  .hover\:bg-slate-50:hover {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+  }
+  .hover\:bg-slate-100:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+  }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -19,7 +19,10 @@ import {
   ChevronRight,
   LogOut,
   User,
-  Home
+  Home,
+  Moon,
+  Sun,
+  MessageCircle,
 } from 'lucide-react';
 
 // Role type for dashboard variants
@@ -64,6 +67,22 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const [isDark, setIsDark] = useState(false);
+
+  // Sync dark mode on mount and toggling
+  useEffect(() => {
+    const saved = localStorage.getItem('qr-dark-mode');
+    const dark = saved === 'true' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    setIsDark(dark);
+    document.documentElement.classList.toggle('dark', dark);
+  }, []);
+
+  function toggleDark() {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle('dark', next);
+    localStorage.setItem('qr-dark-mode', String(next));
+  }
 
   // Role-based navigation
   const navigation: Record<DashboardRole, NavItem[]> = {
@@ -87,6 +106,7 @@ export function DashboardShell({
       { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
       { label: 'My Bookings', href: '/dashboard/bookings', icon: <Calendar className="w-5 h-5" /> },
       { label: 'Book a Ride', href: '/fleet', icon: <Car className="w-5 h-5" /> },
+      { label: 'Live Support', href: '/dashboard/support', icon: <MessageCircle className="w-5 h-5" /> },
       { label: 'Profile', href: '/dashboard/settings', icon: <User className="w-5 h-5" /> },
     ]
   };
@@ -236,6 +256,15 @@ export function DashboardShell({
 
             {/* Right: Actions */}
             <div className="flex items-center gap-3">
+              {/* Dark Mode Toggle */}
+              <button
+                onClick={toggleDark}
+                className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+
               {/* Notifications */}
               <button className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
                 <Bell className="w-5 h-5" />

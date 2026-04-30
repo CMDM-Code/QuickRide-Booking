@@ -1,146 +1,116 @@
 'use client';
 
-import { useState, useEffect } from "react";
-import { ticketStore, SupportTicket } from "@/lib/storage";
-import { authClient } from "@/lib/auth-client";
+import { useEffect, useRef } from 'react';
+import { MessageCircle, Clock, ShieldCheck, Headphones } from 'lucide-react';
 
 export default function SupportPage() {
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("");
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
-
   useEffect(() => {
-    const user = authClient.getCurrentUser();
-    if (user) {
-      setTickets(ticketStore.getAll(user.id));
-    }
+    // Try to maximize the global widget if it's already loaded
+    const checkAndMaximize = setInterval(() => {
+      const api = (window as any).Tawk_API;
+      if (api && api.maximize) {
+        api.maximize();
+        clearInterval(checkAndMaximize);
+      }
+    }, 500);
+
+    return () => clearInterval(checkAndMaximize);
   }, []);
 
-  const createTicket = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    ticketStore.create({
-      subject,
-      status: 'open',
-      priority,
-      messages: [{
-        id: crypto.randomUUID(),
-        sender: 'user',
-        message,
-        createdAt: new Date().toISOString(),
-      }],
-    });
-
-    setSubject("");
-    setMessage("");
-    setShowCreateForm(false);
-
-    const user = authClient.getCurrentUser();
-    if (user) {
-      setTickets(ticketStore.getAll(user.id));
-    }
-  };
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'open': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-amber-100 text-amber-800';
-      case 'closed': return 'bg-slate-100 text-slate-800';
-      default: return 'bg-slate-100 text-slate-800';
-    }
-  };
+  const FEATURES = [
+    {
+      icon: <MessageCircle className="w-6 h-6" />,
+      title: 'Live Chat',
+      desc: 'Connect instantly with our support team — no waiting on hold.',
+    },
+    {
+      icon: <Clock className="w-6 h-6" />,
+      title: '24 / 7 Available',
+      desc: 'We are here around the clock, every day of the year.',
+    },
+    {
+      icon: <ShieldCheck className="w-6 h-6" />,
+      title: 'Secure & Private',
+      desc: 'All conversations are encrypted end-to-end.',
+    },
+    {
+      icon: <Headphones className="w-6 h-6" />,
+      title: 'Expert Agents',
+      desc: 'Our trained rental specialists handle every query.',
+    },
+  ];
 
   return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Support Tickets</h1>
-            <p className="text-slate-600 mt-1">Get help with your rentals</p>
-          </div>
-          <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="bg-green-700 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-800 transition-colors"
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--text-tertiary)] mb-1">
+          Customer Support
+        </p>
+        <h1 className="text-3xl font-bold text-[var(--text-primary)] tracking-tight">
+          Live Chat Support
+        </h1>
+        <p className="text-[var(--text-secondary)] mt-1.5">
+          Chat directly with our team — we typically reply in under 2 minutes.
+        </p>
+      </div>
+
+      {/* Features Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {FEATURES.map((f) => (
+          <div
+            key={f.title}
+            className="rounded-2xl p-5 border border-[var(--border-subtle)] transition-all hover:border-[var(--color-primary-300)] hover:shadow-md"
+            style={{ background: 'var(--bg-secondary)' }}
           >
-            New Ticket
-          </button>
-        </div>
-
-        {showCreateForm && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">Create Support Ticket</h2>
-            <form onSubmit={createTicket} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Subject</label>
-                <input
-                  type="text"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-700 focus:border-transparent"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Priority</label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as any)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-700 focus:border-transparent"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Message</label>
-                <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  rows={4}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-green-700 focus:border-transparent"
-                  required
-                />
-              </div>
-              <button
-                type="submit"
-                className="bg-green-700 text-white px-6 py-3 rounded-xl font-medium hover:bg-green-800 transition-colors"
-              >
-                Submit Ticket
-              </button>
-            </form>
+            <div className="w-11 h-11 rounded-xl bg-[var(--color-primary-50)] flex items-center justify-center text-[var(--color-primary-700)] mb-3">
+              {f.icon}
+            </div>
+            <p className="font-semibold text-sm text-[var(--text-primary)]">{f.title}</p>
+            <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">{f.desc}</p>
           </div>
-        )}
+        ))}
+      </div>
 
-        {tickets.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-12 text-center">
-            <div className="text-6xl mb-4">🎫</div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">No support tickets</h3>
-            <p className="text-slate-600 max-w-md mx-auto">
-              If you need help with your booking or have questions about our service, create a new support ticket and our team will get back to you.
+      {/* Chat Area — Tawk.to opens as a floating widget automatically */}
+      <div
+        className="rounded-3xl border border-[var(--border-default)] overflow-hidden relative"
+        style={{ background: 'var(--bg-secondary)', minHeight: '420px' }}
+      >
+        <div className="flex flex-col items-center justify-center h-full py-20 gap-5 px-8 text-center">
+          <div className="w-20 h-20 rounded-2xl bg-[var(--color-primary-50)] flex items-center justify-center shadow-lg">
+            <MessageCircle className="w-10 h-10 text-[var(--color-primary-700)]" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-[var(--text-primary)]">
+              Chat is Loading…
+            </h2>
+            <p className="text-[var(--text-secondary)] mt-2 max-w-xs mx-auto leading-relaxed text-sm">
+              The live chat widget will appear at the bottom-right of your screen. Click the chat bubble to start a conversation with our team.
             </p>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {tickets.map((ticket) => (
-              <div key={ticket.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-bold text-slate-900">{ticket.subject}</h3>
-                    <p className="text-sm text-slate-500 mt-1">
-                      Created {new Date(ticket.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium capitalize ${getStatusBadgeColor(ticket.status)}`}>
-                    {ticket.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+          <button
+            onClick={() => {
+              const api = (window as any).Tawk_API;
+              if (api?.maximize) api.maximize();
+              else if (api?.toggle) api.toggle();
+            }}
+            className="px-8 py-3.5 rounded-xl font-bold text-white shadow-lg hover:brightness-90 transition-all flex items-center gap-2"
+            style={{ background: '#15803d' }}
+          >
+            <MessageCircle className="w-4 h-4" />
+            Open Chat Now
+          </button>
+        </div>
       </div>
+
+      {/* Footer note */}
+      <p className="text-xs text-center text-[var(--text-tertiary)]">
+        You can also email us at{' '}
+        <a href="mailto:support@quickridebooking.com" className="text-[var(--color-primary-700)] font-semibold hover:underline">
+          support@quickridebooking.com
+        </a>
+      </p>
+    </div>
   );
 }
-

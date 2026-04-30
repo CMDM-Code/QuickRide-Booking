@@ -1,0 +1,186 @@
+
+> nextjs-template@0.1.0 typecheck
+> tsc --noEmit
+
+scripts/migrate-fleet-to-vehicles.ts(20,75): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/about-us/page.tsx(9,48): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin-login/page.tsx(7,29): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin-login/page.tsx(9,18): error TS2307: Cannot find module '@/assets/images/quickride_logo.png' or its corresponding type declarations.
+src/app/admin/bookings/page.tsx(14,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin/bookings/page.tsx(119,44): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/dashboard/page.tsx(7,78): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin/dashboard/page.tsx(61,35): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/dashboard/page.tsx(65,30): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/levels/page.tsx(15,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin/levels/page.tsx(42,47): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/levels/page.tsx(43,43): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/locations/page.tsx(15,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin/media/page.tsx(4,37): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin/media/page.tsx(28,36): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/page.tsx(12,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin/pricing/page.tsx(59,40): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/page.tsx(60,44): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/page.tsx(61,43): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/page.tsx(62,42): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/page.tsx(65,16): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/admin/pricing/page.tsx(66,18): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/app/admin/pricing/page.tsx(66,21): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/app/admin/pricing/page.tsx(75,37): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/admin/pricing/schedules/new/page.tsx(13,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin/pricing/schedules/new/page.tsx(56,41): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/schedules/new/page.tsx(57,44): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/schedules/new/page.tsx(58,39): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/schedules/new/page.tsx(59,39): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/schedules/page.tsx(16,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin/pricing/schedules/page.tsx(99,42): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/schedules/page.tsx(100,41): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/schedules/page.tsx(101,44): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/schedules/page.tsx(102,37): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/schedules/page.tsx(103,40): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/pricing/schedules/page.tsx(112,36): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/admin/reports/page.tsx(10,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin/reports/page.tsx(43,33): error TS18046: 'bookingsSnap' is of type 'unknown'.
+src/app/admin/reports/page.tsx(60,51): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/app/admin/settings/booking-form/page.tsx(5,54): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin/users/page.tsx(14,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin/vehicles/page.tsx(15,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/admin/vehicles/page.tsx(77,52): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/vehicles/page.tsx(78,51): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/vehicles/page.tsx(81,60): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/admin/vehicles/page.tsx(97,67): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/app/admin/vehicles/page.tsx(99,46): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/admin/vehicles/page.tsx(113,43): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/auth/forgot-password/page.tsx(6,40): error TS7016: Could not find a declaration file for module 'firebase/auth'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/auth/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/auth';`
+src/app/auth/logged-out/page.tsx(6,18): error TS2307: Cannot find module '@/assets/images/quickride_logo.png' or its corresponding type declarations.
+src/app/auth/login/page.tsx(8,18): error TS2307: Cannot find module '@/assets/images/quickride_logo.png' or its corresponding type declarations.
+src/app/auth/reset-password/page.tsx(6,18): error TS2307: Cannot find module '@/assets/images/quickride_logo.png' or its corresponding type declarations.
+src/app/auth/signup/page.tsx(8,18): error TS2307: Cannot find module '@/assets/images/quickride_logo.png' or its corresponding type declarations.
+src/app/dashboard/bookings/page.tsx(8,78): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/dashboard/bookings/page.tsx(77,21): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/dashboard/favorites/page.tsx(13,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/dashboard/page.tsx(6,60): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/dashboard/payments/page.tsx(11,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/dashboard/payments/page.tsx(16,32): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/dashboard/payments/page.tsx(62,38): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/app/dashboard/reviews/page.tsx(12,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/dashboard/reviews/page.tsx(42,54): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/dashboard/reviews/page.tsx(44,33): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/dashboard/settings/page.tsx(6,40): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/fleet/page.tsx(10,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/page.tsx(11,78): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/page.tsx(49,48): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/staff-login/page.tsx(5,29): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/app/staff-login/page.tsx(9,18): error TS2307: Cannot find module '@/assets/images/quickride_logo.png' or its corresponding type declarations.
+src/app/staff/bookings/page.tsx(7,32): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/components/forms/BookingForm.tsx(14,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/components/forms/BookingForm.tsx(434,52): error TS7006: Parameter 'profileDoc' implicitly has an 'any' type.
+src/components/forms/ModernBookingFlow.tsx(8,41): error TS7016: Could not find a declaration file for module 'framer-motion'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/framer-motion/dist/es/index.mjs' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/framer-motion` if it exists or add a new declaration (.d.ts) file containing `declare module 'framer-motion';`
+src/components/forms/ModernBookingFlow.tsx(10,110): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/components/forms/ModernBookingFlow.tsx(1133,46): error TS2304: Cannot find name 'isSubmitting'.
+src/components/forms/ModernBookingFlow.tsx(1138,48): error TS2304: Cannot find name 'isSubmitting'.
+src/components/layout/Footer.tsx(3,18): error TS2307: Cannot find module '@/assets/images/quickride_logo.png' or its corresponding type declarations.
+src/components/modals/BookingModal.tsx(2,41): error TS7016: Could not find a declaration file for module 'framer-motion'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/framer-motion/dist/es/index.mjs' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/framer-motion` if it exists or add a new declaration (.d.ts) file containing `declare module 'framer-motion';`
+src/components/modals/PaymentModal.tsx(4,41): error TS7016: Could not find a declaration file for module 'framer-motion'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/framer-motion/dist/es/index.mjs' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/framer-motion` if it exists or add a new declaration (.d.ts) file containing `declare module 'framer-motion';`
+src/components/modals/PaymentModal.tsx(101,18): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/lib/audit-log-service.ts(13,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/audit-log-service.ts(230,53): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/lib/auth-client.ts(9,8): error TS7016: Could not find a declaration file for module 'firebase/auth'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/auth/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/auth';`
+src/lib/auth-client.ts(10,54): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/auth-client.ts(232,39): error TS7006: Parameter 'user' implicitly has an 'any' type.
+src/lib/booking-access-service.ts(14,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/booking-access-service.ts(147,26): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/lib/booking-service.ts(22,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/booking-service.ts(312,51): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/lib/branding-service.ts(6,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/branding-service.ts(11,8): error TS7016: Could not find a declaration file for module 'firebase/storage'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/storage/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/storage';`
+src/lib/chat-service.ts(15,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/chat-service.ts(109,25): error TS7006: Parameter 'snapshot' implicitly has an 'any' type.
+src/lib/chat-service.ts(110,41): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/lib/chat-service.ts(129,25): error TS7006: Parameter 'snapshot' implicitly has an 'any' type.
+src/lib/chat-service.ts(130,38): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/lib/dashboard-utils.ts(13,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/dashboard-utils.ts(74,47): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/lib/dashboard-utils.ts(74,52): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/lib/dashboard-utils.ts(77,46): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/lib/dashboard-utils.ts(77,51): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/lib/dashboard-utils.ts(78,46): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/lib/dashboard-utils.ts(78,51): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/lib/dashboard-utils.ts(129,44): error TS18046: 'snap' is of type 'unknown'.
+src/lib/dashboard-utils.ts(129,65): error TS7006: Parameter 'docRef' implicitly has an 'any' type.
+src/lib/error-service.ts(10,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/error-service.ts(37,47): error TS7006: Parameter 'adminDoc' implicitly has an 'any' type.
+src/lib/error-service.ts(66,26): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/lib/firebase.ts(1,48): error TS7016: Could not find a declaration file for module 'firebase/app'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/app/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/app';`
+src/lib/firebase.ts(2,25): error TS7016: Could not find a declaration file for module 'firebase/auth'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/auth/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/auth';`
+src/lib/firebase.ts(3,30): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/firebase.ts(4,28): error TS7016: Could not find a declaration file for module 'firebase/storage'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/storage/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/storage';`
+src/lib/loyalty-service.ts(2,88): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/media-service.ts(8,8): error TS7016: Could not find a declaration file for module 'firebase/storage'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/storage/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/storage';`
+src/lib/media-service.ts(20,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/media-service.ts(52,8): error TS7006: Parameter 'snapshot' implicitly has an 'any' type.
+src/lib/media-service.ts(56,8): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/lib/media-service.ts(101,27): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/lib/media-service.ts(153,11): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/lib/media-service.ts(154,14): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/lib/notification-service.ts(15,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/notification-service.ts(49,25): error TS7006: Parameter 'snapshot' implicitly has an 'any' type.
+src/lib/notification-service.ts(50,46): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/lib/notification-service.ts(85,28): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/lib/schedules.ts(1,32): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/settings-service.ts(1,54): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/staff-service.ts(10,8): error TS7016: Could not find a declaration file for module 'firebase/firestore'. 'C:/Users/lixto/OneDrive/Documents/GitHub/QuickRide-Booking/node_modules/firebase/firestore/dist/esm/index.esm.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/firebase` if it exists or add a new declaration (.d.ts) file containing `declare module 'firebase/firestore';`
+src/lib/staff-service.ts(28,26): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/lib/staff-service.ts(70,26): error TS7006: Parameter 'doc' implicitly has an 'any' type.
