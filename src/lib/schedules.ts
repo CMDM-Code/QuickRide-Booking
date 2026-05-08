@@ -1,121 +1,46 @@
-import type { Timestamp } from "firebase/firestore";
+/**
+ * Stub for schedule-related types and helpers.
+ * Scheduled pricing was removed per A3 simplification, but these exports
+ * remain to satisfy existing imports until full refactor.
+ */
 
-export type ScheduleScope =
-  | { kind: "all" }
-  | { kind: "carType"; carTypeIds: string[] }
-  | { kind: "carModel"; carModelIds: string[] };
-
-export type ScheduleAdjustment =
-  | { kind: "flat"; amount: number }
-  | { kind: "percent"; percent: number }; // +10 or -15
-
-export type PricingSchedule = {
+export interface PricingSchedule {
   id: string;
-  name: string;
-  enabled: boolean;
-  scope: ScheduleScope;
-  locationIds?: string[]; // any match
-  levelIds?: string[]; // any match
-  startAt?: Date | null;
-  endAt?: Date | null;
-  priority: number;
-  createdAt?: Date | null;
-  updatedAt?: Date | null;
-  adjustment: ScheduleAdjustment;
-};
-
-function tsToDate(v: any): Date | null {
-  if (!v) return null;
-  if (v instanceof Date) return v;
-  if (typeof v?.toDate === "function") return v.toDate();
-  if (typeof v?._seconds === "number") return new Date(v._seconds * 1000);
-  return null;
+  name?: string;
+  car_type_ids?: string[];
+  location_ids?: string[];
+  start_date?: string;
+  end_date?: string;
+  adjustment?: { type: 'percentage' | 'flat'; value: number };
+  active?: boolean;
 }
 
-export function normalizeSchedule(doc: { id: string; [k: string]: any }): PricingSchedule {
-  let scope = doc.scope ?? { kind: "all" };
-  
-  // Migration/Compat: if old single ID fields exist, convert to arrays
-  if (scope.kind === "carType" && scope.carTypeId && !scope.carTypeIds) {
-    scope.carTypeIds = [scope.carTypeId];
-  }
-  if (scope.kind === "carModel" && scope.carModelId && !scope.carModelIds) {
-    scope.carModelIds = [scope.carModelId];
-  }
-
+/** No-op normalization to keep types consistent with Firestore data. */
+export function normalizeSchedule(raw: any): PricingSchedule {
   return {
-    id: doc.id,
-    name: String(doc.name ?? "Schedule"),
-    enabled: Boolean(doc.enabled ?? true),
-    scope: scope,
-    locationIds: Array.isArray(doc.locationIds) ? doc.locationIds : undefined,
-    levelIds: Array.isArray(doc.levelIds) ? doc.levelIds : undefined,
-    startAt: tsToDate(doc.startAt),
-    endAt: tsToDate(doc.endAt),
-    priority: typeof doc.priority === "number" ? doc.priority : 0,
-    createdAt: tsToDate(doc.created_at ?? doc.createdAt),
-    updatedAt: tsToDate(doc.updated_at ?? doc.updatedAt),
-    adjustment: doc.adjustment ?? { kind: "flat", amount: 0 }
+    id: raw?.id ?? '',
+    name: raw?.name ?? '',
+    car_type_ids: raw?.car_type_ids ?? [],
+    location_ids: raw?.location_ids ?? [],
+    start_date: raw?.start_date ?? '',
+    end_date: raw?.end_date ?? '',
+    adjustment: raw?.adjustment ?? undefined,
+    active: raw?.active ?? false,
   };
 }
 
-export function isScheduleActive(s: PricingSchedule, now: Date) {
-  if (!s.enabled) return false;
-  if (s.startAt && now < s.startAt) return false;
-  if (s.endAt && now > s.endAt) return false;
-  return true;
-}
-
-function scopeMatches(s: PricingSchedule, ctx: { carTypeId: string; carModelId?: string }) {
-  if (s.scope.kind === "all") return true;
-  if (s.scope.kind === "carType") return s.scope.carTypeIds.includes(ctx.carTypeId);
-  if (s.scope.kind === "carModel") return Boolean(ctx.carModelId) && s.scope.carModelIds.includes(ctx.carModelId!);
-  return false;
-}
-
-function locationMatches(s: PricingSchedule, locationIds: string[]) {
-  if (!s.locationIds || s.locationIds.length === 0) return true;
-  const set = new Set(locationIds);
-  return s.locationIds.some((id) => set.has(id));
-}
-
-function levelMatches(s: PricingSchedule, levelIds: string[]) {
-  if (!s.levelIds || s.levelIds.length === 0) return true;
-  const set = new Set(levelIds);
-  return s.levelIds.some((id) => set.has(id));
-}
-
+/** Always returns null because scheduled pricing is removed (A3). */
 export function pickActiveSchedule(
-  schedules: PricingSchedule[],
-  ctx: { carTypeId: string; carModelId?: string; locationIds: string[]; levelIds?: string[]; now: Date }
-) {
-  const candidates = schedules
-    .filter((s) => isScheduleActive(s, ctx.now))
-    .filter((s) => scopeMatches(s, { carTypeId: ctx.carTypeId, carModelId: ctx.carModelId }))
-    .filter((s) => locationMatches(s, ctx.locationIds))
-    .filter((s) => levelMatches(s, ctx.levelIds ?? []));
-
-  candidates.sort((a, b) => {
-    if (b.priority !== a.priority) return b.priority - a.priority;
-    const at = a.createdAt?.getTime() ?? 0;
-    const bt = b.createdAt?.getTime() ?? 0;
-    return bt - at;
-  });
-
-  return candidates[0] ?? null;
+  _schedules: PricingSchedule[],
+  _criteria: { carTypeId?: string; locationIds?: string[]; now?: Date }
+): PricingSchedule | null {
+  return null;
 }
 
-export function applyScheduleAdjustment(baseTotal: number, adj: ScheduleAdjustment) {
-  if (adj.kind === "flat") return baseTotal + adj.amount;
-  const factor = 1 + adj.percent / 100;
-  return Math.round(baseTotal * factor);
+/** Returns base unchanged because scheduled pricing is removed (A3). */
+export function applyScheduleAdjustment(
+  baseTotal: number,
+  _adjustment?: PricingSchedule['adjustment']
+): number {
+  return baseTotal;
 }
-
-export function overlaps(a: PricingSchedule, b: PricingSchedule) {
-  const aStart = a.startAt?.getTime() ?? -Infinity;
-  const aEnd = a.endAt?.getTime() ?? Infinity;
-  const bStart = b.startAt?.getTime() ?? -Infinity;
-  const bEnd = b.endAt?.getTime() ?? Infinity;
-  return aStart <= bEnd && bStart <= aEnd;
-}
-

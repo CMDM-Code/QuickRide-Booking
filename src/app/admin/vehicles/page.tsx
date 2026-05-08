@@ -261,7 +261,6 @@ export default function VehicleManagementPage() {
         color: 'White',
         category: 'economy' as any,
         status: 'available',
-        available: true,
         dailyRate: 0,
         mileage: 0,
         seats: newVehicle.seats,
@@ -278,13 +277,13 @@ export default function VehicleManagementPage() {
     if (mode === 'cloud' && db) {
       try {
         const vehicleRef = doc(db, 'vehicles', id);
-        await updateDoc(vehicleRef, { available: !current });
+        await updateDoc(vehicleRef, { status: !current ? 'maintenance' : 'available' });
         fetchData();
       } catch (err) {
           console.error("Error toggling availability:", err);
       }
     } else {
-      adminStore.updateVehicle(id, { available: !current });
+      adminStore.updateVehicle(id, { status: !current ? 'maintenance' : 'available' });
       fetchData();
     }
   };

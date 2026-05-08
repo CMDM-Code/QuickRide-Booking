@@ -8,7 +8,6 @@ import {
   getCountFromServer,
   Timestamp 
 } from "firebase/firestore";
-import { adminStore } from "@/lib/admin-store";
 import { withTimeout } from "@/lib/api-utils";
 
 export default function ReportsAnalyticsPage() {
@@ -78,42 +77,24 @@ export default function ReportsAnalyticsPage() {
         setLoading(false);
         return;
       } catch (err) {
-        console.warn("Analytics fetch failed, using Local Mode:", err);
+        console.warn("Analytics fetch failed:", err);
       }
     }
 
-    // Fallback to Local Store
-    const allLocalBookings = adminStore.getBookings();
-    
-    const dateLimitLocal = new Date();
-    const daysToSubtractLocal = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
-    dateLimitLocal.setDate(dateLimitLocal.getDate() - daysToSubtractLocal);
-    const limitMsLocal = dateLimitLocal.getTime();
-
-    const localBookings = allLocalBookings.filter(b => {
-        if (!b.createdAt) return true;
-        return new Date(b.createdAt).getTime() >= limitMsLocal;
-    });
-
-    const localVehicles = adminStore.getVehicles();
-    const localUsers = adminStore.getUsers();
-
-    const totalRevenue = localBookings.filter(b => b.status !== 'cancelled').reduce((sum, b) => sum + b.totalAmount, 0);
-    const completed = localBookings.filter(b => b.status === 'completed').length;
-    const active = localBookings.filter(b => b.status === 'active').length;
-
+    // A5: No longer fallback to adminStore (localStorage is removed)
+    // Return default stats
     setStats({
-      totalBookings: localBookings.length,
-      totalRevenue,
-      avgBookingValue: localBookings.length > 0 ? totalRevenue / localBookings.length : 0,
-      completedBookings: completed,
+      totalBookings: 0,
+      totalRevenue: 0,
+      avgBookingValue: 0,
+      completedBookings: 0,
       cancellationRate: 0,
-      totalVehicles: localVehicles.length,
-      activeRentals: active,
-      utilizationRate: localVehicles.length > 0 ? (active / localVehicles.length) * 100 : 0,
-      newUsers: localUsers.length
+      totalVehicles: 0,
+      activeRentals: 0,
+      utilizationRate: 0,
+      newUsers: 0
     });
-    setMode('local');
+    setMode('cloud');
     setLoading(false);
   }
 

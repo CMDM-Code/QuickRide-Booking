@@ -15,20 +15,65 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { Notification, NotificationPreferences } from "./types";
+import { getFullConfig, NotificationSettings } from "./settings-service";
 
 const NOTIFICATIONS_COLLECTION = "notifications";
 const PROFILES_COLLECTION = "profiles";
 
+export type TriggerType = 
+  | 'trigger_booking_created'
+  | 'trigger_booking_approved'
+  | 'trigger_booking_rejected'
+  | 'trigger_payment_received'
+  | 'trigger_payment_failed'
+  | 'trigger_refund_processed';
+
+const URGENT_TYPES = [
+  'booking_approved',
+  'booking_rejected',
+  'payment_received',
+  'payment_failed',
+  'refund_processed',
+  'maintenance_conflict',
+  'late_fee_applied'
+];
+
 /**
- * Creates a new notification in Firestore.
+ * Creates a new notification in Firestore (with B6.1 and B6.2 gating).
  */
-export async function createNotification(notification: Omit<Notification, "id" | "created_at" | "read">) {
+export async function createNotification(
+  notification: Omit<Notification, "id" | "created_at" | "read">,
+  triggerType?: TriggerType
+) {
   try {
+    const config = getFullConfig();
+    const settings = config.notifications;
+
+    // B6.1 — System-wide notification gate
+    if (!settings.in_app_notifications) return null;
+    if (triggerType && !settings[triggerType]) return null;
+
+    // B6.2 — Urgency-only flag
+    // Assume notification.type is string. Check if it's in URGENT_TYPES, or if the notification itself is marked urgent (if we extend the type)
+    const isUrgent = URGENT_TYPES.includes(notification.type);
+    
+    if (settings.urgency_only_flag && !isUrgent) {
+      return null; // Suppress non-urgent notifications
+    }
+
     const docRef = await addDoc(collection(db, NOTIFICATIONS_COLLECTION), {
       ...notification,
       read: false,
+      is_urgent: isUrgent,
       created_at: serverTimestamp(),
     });
+
+    // B6.3 Email scaffold
+    if (settings.email_notifications) {
+      // In a real app we'd fetch the user's email here
+      sendEmailNotificationScaffold("user@example.com", notification.type, notification);
+    }
+
     return docRef.id;
   } catch (error) {
     console.error("Error creating notification:", error);
@@ -132,3 +177,25 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
     chat: true,
   },
 };
+
+/**
+ * B6.3 - Scaffold for Email Notifications
+ */
+export async function sendEmailNotificationScaffold(
+  email: string,
+  type: string,
+  data: any
+) {
+  try {
+    // Non-blocking async fetch
+    fetch('/api/notifications/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, type, data }),
+    }).catch(err => {
+      console.warn('Silent failure sending email notification:', err);
+    });
+  } catch (err) {
+    console.warn('Silent failure sending email notification:', err);
+  }
+}

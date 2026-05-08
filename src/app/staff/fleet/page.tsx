@@ -2,35 +2,53 @@
 
 import StaffLayout from "../layout";
 import { useEffect, useState } from "react";
-import { staffStore, Vehicle } from "@/lib/staff-store";
+import { getAllVehicles, updateVehicleStatus, type Vehicle } from "@/lib/vehicle-service";
 
 export default function FleetPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setVehicles(staffStore.getVehicles());
+    const loadVehicles = async () => {
+      try {
+        setLoading(true);
+        const data = await getAllVehicles();
+        setVehicles(data);
+      } catch (error) {
+        console.error('Error loading vehicles:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadVehicles();
   }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'available': return 'badge-success';
-      case 'in-use': return 'badge-info';
+      case 'rented': return 'badge-info';
       case 'maintenance': return 'badge-warning';
-      case 'cleaning': return 'badge-neutral';
+      case 'retired': return 'badge-neutral';
       default: return 'badge-neutral';
     }
   };
 
-  const handleStatusChange = (id: number, newStatus: string) => {
-    staffStore.updateVehicleStatus(id, newStatus as any);
-    setVehicles(staffStore.getVehicles());
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    try {
+      await updateVehicleStatus(id, newStatus as any);
+      const updated = await getAllVehicles();
+      setVehicles(updated);
+    } catch (error) {
+      console.error('Error updating vehicle status:', error);
+    }
   };
 
   const statusCounts = {
     available: vehicles.filter(v => v.status === 'available').length,
-    'in-use': vehicles.filter(v => v.status === 'in-use').length,
+    rented: vehicles.filter(v => v.status === 'rented').length,
     maintenance: vehicles.filter(v => v.status === 'maintenance').length,
-    cleaning: vehicles.filter(v => v.status === 'cleaning').length,
+    retired: vehicles.filter(v => v.status === 'retired').length,
   };
 
   return (
@@ -73,7 +91,7 @@ export default function FleetPage() {
                   {vehicles.map((vehicle) => (
                     <tr key={vehicle.id} className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="py-4 px-4 font-medium text-slate-900">{vehicle.name}</td>
-                      <td className="py-4 px-4 font-mono text-slate-700">{vehicle.plate}</td>
+                      <td className="py-4 px-4 font-mono text-slate-700">{vehicle.licensePlate}</td>
                       <td className="py-4 px-4 text-slate-700">{vehicle.mileage.toLocaleString()} km</td>
                       <td className="py-4 px-4">
                         <span className={`badge ${getStatusColor(vehicle.status)} capitalize`}>{vehicle.status}</span>
@@ -85,9 +103,9 @@ export default function FleetPage() {
                           onChange={(e) => handleStatusChange(vehicle.id, e.target.value)}
                         >
                           <option value="available">Available</option>
-                          <option value="in-use">In Use</option>
+                          <option value="rented">Rented</option>
                           <option value="maintenance">Maintenance</option>
-                          <option value="cleaning">Cleaning</option>
+                          <option value="retired">Retired</option>
                         </select>
                       </td>
                     </tr>

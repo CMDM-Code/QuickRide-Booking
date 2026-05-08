@@ -2,29 +2,63 @@
 
 import StaffLayout from "../layout";
 import { useEffect, useState } from "react";
-import { staffStore, Booking, Vehicle } from "@/lib/staff-store";
+import { getAllBookings, patchBooking, type FirestoreBooking } from "@/lib/booking-service";
+import { getAllVehicles, updateVehicleStatus, type Vehicle } from "@/lib/vehicle-service";
 
 export default function AssignVehiclePage() {
-  const [confirmedBookings, setConfirmedBookings] = useState<Booking[]>([]);
+  const [confirmedBookings, setConfirmedBookings] = useState<FirestoreBooking[]>([]);
   const [availableVehicles, setAvailableVehicles] = useState<Vehicle[]>([]);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<FirestoreBooking | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const bookings = staffStore.getBookings();
-    setConfirmedBookings(bookings.filter(b => b.status === 'confirmed' && !b.vehicleId));
-    setAvailableVehicles(staffStore.getVehicles().filter(v => v.status === 'available'));
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const bookings = await getAllBookings();
+        const vehicles = await getAllVehicles();
+        
+        setConfirmedBookings(bookings.filter(b => b.status === 'approved' && !b.assigned_vehicle_id));
+        setAvailableVehicles(vehicles.filter(v => v.status === 'available'));
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
   }, []);
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (selectedBooking && selectedVehicle) {
-      staffStore.assignVehicle(selectedBooking.id, selectedVehicle.id);
-      setConfirmedBookings(prev => prev.filter(b => b.id !== selectedBooking.id));
-      setAvailableVehicles(prev => prev.map(v => 
-        v.id === selectedVehicle.id ? {...v, status: 'in-use'} : v
-      ));
-      setSelectedBooking(null);
-      setSelectedVehicle(null);
+      try {
+        // Assign vehicle to booking
+        await patchBooking(selectedBooking.id, {
+          assigned_vehicle_id: selectedVehicle.id,
+          status: 'approved'
+        }, {
+          at: new Date().toISOString(),
+          by: 'staff',
+          action: 'assigned_vehicle',
+          detail: `Assigned ${selectedVehicle.name}`
+        });
+        
+        // Update vehicle status to rented
+        await updateVehicleStatus(selectedVehicle.id, 'rented');
+        
+        // Reload data
+        const bookings = await getAllBookings();
+        const vehicles = await getAllVehicles();
+        setConfirmedBookings(bookings.filter(b => b.status === 'approved' && !b.assigned_vehicle_id));
+        setAvailableVehicles(vehicles.filter(v => v.status === 'available'));
+        
+        setSelectedBooking(null);
+        setSelectedVehicle(null);
+      } catch (error) {
+        console.error('Error assigning vehicle:', error);
+      }
     }
   };
 
@@ -58,9 +92,9 @@ export default function AssignVehiclePage() {
                     }`}
                   >
                     <div className="font-bold text-slate-900">{booking.id}</div>
-                    <div className="text-sm text-slate-600">{booking.customerName}</div>
+                    <div className="text-sm text-slate-600">{booking.profile?.name || 'Customer'}</div>
                     <div className="text-sm text-slate-500">
-                      {new Date(booking.pickupDate).toLocaleDateString()} - {new Date(booking.returnDate).toLocaleDateString()}
+                      {new Date(booking.start_date).toLocaleDateString()} - {new Date(booking.end_date).toLocaleDateString()}
                     </div>
                   </div>
                 ))}
@@ -80,7 +114,7 @@ export default function AssignVehiclePage() {
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
-                    <div className="font-bold text-slate-900">{vehicle.plate}</div>
+                    <div className="font-bold text-slate-900">{vehicle.licensePlate}</div>
                     <div className="text-sm text-slate-500">VIN: {vehicle.vin}</div>
                     <div className="text-sm text-slate-500">Mileage: {vehicle.mileage.toLocaleString()} km</div>
                   </div>

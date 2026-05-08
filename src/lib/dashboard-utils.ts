@@ -11,9 +11,9 @@ import {
   doc,
   getDoc
 } from "firebase/firestore";
-import { adminStore } from "./admin-store";
 import { withTimeout } from "./api-utils";
 import { subDays } from "date-fns";
+import { getSecurityLogs } from "./admin-store";
 
 export interface DashboardStats {
   totalRevenue: number;
@@ -100,27 +100,23 @@ export async function fetchGlobalStats(): Promise<DashboardStats> {
 }
 
 function getLocalStats(): DashboardStats {
-  const bookings = adminStore.getBookings();
-  const users = adminStore.getUsers();
-
-  const totalRevenue = bookings.filter(b => b.status !== 'cancelled').reduce((sum, b) => sum + b.totalAmount, 0);
-  const activeRentals = bookings.filter(b => b.status === 'active').length;
-
+  // A5: No longer use adminStore (localStorage is removed)
+  // Return default stats - Firestore should be queried in production
   return {
-    totalRevenue,
-    activeUsers: users.length,
-    activeRentals,
-    totalBookings: bookings.length,
-    revenueChange: 'LIVE',
-    usersChange: 'LIVE',
-    rentalsChange: 'LIVE',
-    bookingsChange: 'LIVE',
+    totalRevenue: 0,
+    activeUsers: 0,
+    activeRentals: 0,
+    totalBookings: 0,
+    revenueChange: '—',
+    usersChange: '—',
+    rentalsChange: '—',
+    bookingsChange: '—',
   };
 }
 
 export async function fetchRecentActivity() {
     const firestore = db;
-    if (!firestore) return adminStore.getSecurityLogs().slice(0, 5);
+    if (!firestore) return [];
 
     try {
       const q = query(collection(firestore, 'bookings'), orderBy('created_at', 'desc'), limit(8));
@@ -154,9 +150,10 @@ export async function fetchRecentActivity() {
     return activities;
   } catch (err) {
     console.warn("Cloud activity fetch failed:", err);
-    return adminStore.getSecurityLogs().slice(0, 8).map(log => ({
-      action: log.action,
-      user: log.details.split(' ').pop() || 'System',
+    const logs = await getSecurityLogs();
+    return logs.slice(0, 8).map(log => ({
+      action: log.action_type,
+      user: log.actor_name || log.actor_id || 'System',
       time: new Date(log.timestamp).toLocaleTimeString()
     }));
   }

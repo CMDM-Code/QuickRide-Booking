@@ -3,14 +3,14 @@ import { useState, useRef, useEffect } from 'react';
 import {
   X, ChevronRight, ChevronLeft, MapPin, Calendar, Clock,
   Plus, Trash2, ArrowRight, Check, Car, Edit3, Users,
-  Settings, ChevronDown, Navigation, AlertCircle, Layers,
+  Settings, ChevronDown, Navigation, AlertCircle, Layers, Lock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from "@/lib/firebase";
 import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, Timestamp, query, where, limit } from "firebase/firestore";
 import { authClient } from "@/lib/auth-client";
 import { PricingRate } from "@/lib/types";
-import { getPricingBehaviorMode, shouldStorePriceAtBookingTime } from "@/lib/settings-service";
+import { getFullConfig, getPricingBehaviorMode, shouldStorePriceAtBookingTime } from "@/lib/settings-service";
 import { MOCK_VEHICLES, MOCK_RATES } from "@/lib/mock-data";
 import { ImageWithFallback } from "../ui/ImageWithFallback";
 import PaymentModal from "@/components/modals/PaymentModal";
@@ -57,29 +57,6 @@ type LocationStep = 'region' | 'province' | 'city' | 'input';
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
-const LOCATION_DATA: Record<string, Record<string, string[]>> = {
-  'Region XI (Davao Region)': {
-    'Davao del Norte': ['Tagum City', 'Panabo City', 'Island Garden City of Samal', 'Carmen', 'Asuncion'],
-    'Davao del Sur': ['Digos City', 'Hagonoy', 'Kiblawan', 'Padada', 'Sulop'],
-    'Davao de Oro': ['Nabunturan', 'Montevista', 'Mawab', 'Monkayo', 'Compostela'],
-    'Davao Occidental': ['Jose Abad Santos', 'Don Marcelino', 'Malita', 'Sarangani', 'Santa Maria'],
-    'Davao Oriental': ['Mati City', 'Baganga', 'Caraga', 'Boston', 'Cateel'],
-    'Davao City': ['Davao City'],
-  },
-  'Region XII (SOCCSKSARGEN)': {
-    'South Cotabato': ['General Santos City', 'Koronadal City', 'Surallah', 'Tboli', 'Banga'],
-    'Sarangani': ['Alabel', 'Malapatan', 'Glan', 'Maasim', 'Malungon'],
-    'North Cotabato': ['Kidapawan City', 'Mlang', 'Kabacan', 'Matalam', 'Pigcawayan'],
-    'Sultan Kudarat': ['Tacurong City', 'Isulan', 'Lebak', 'Kalamansig', 'Palimbang'],
-  },
-  'Region X (Northern Mindanao)': {
-    'Bukidnon': ['Malaybalay City', 'Valencia City', 'Quezon', 'Maramag', 'Impasugong'],
-    'Misamis Oriental': ['Cagayan de Oro City', 'Gingoog City', 'El Salvador', 'Villanueva'],
-    'Misamis Occidental': ['Oroquieta City', 'Ozamiz City', 'Tangub City', 'Jimenez'],
-    'Lanao del Norte': ['Iligan City', 'Bacolod', 'Kapatagan', 'Kolambugan'],
-    'Camiguin': ['Mambajao', 'Sagay', 'Catarman', 'Guinsiliban'],
-  },
-};
 
 const SUGGESTION_MAP: Record<string, string[]> = {
   'Davao City': [
@@ -136,11 +113,14 @@ function calcPrice(
   destinations: Destination[], 
   rates: PricingRate[],
   pricingSheets: any[] = [],
-  locations: any[] = []
+  locations: any[] = [],
+  taxRate: number = 0
 ): {
   baseCost: number;
   driverFee: number;
   routeFee: number;
+  taxAmount: number;
+  taxRate: number;
   total: number;
   days: number;
   ratePerDay: number;
@@ -236,11 +216,15 @@ function calcPrice(
   if (remainderHours > 0) labelParts.push(`${remainderHours} Hr${remainderHours > 1 ? 's' : ''}`);
   const durationLabel = labelParts.join(', ') || '0 Hrs';
 
+  const taxAmount = Math.round(baseCost * (taxRate / 100));
+
   return { 
     baseCost, 
     driverFee, 
     routeFee, 
-    total: baseCost + driverFee + routeFee, 
+    taxAmount,
+    taxRate,
+    total: baseCost + driverFee + routeFee + taxAmount, 
     days: totalHours / 24, 
     ratePerDay: rate24h,
     durationLabel
@@ -489,28 +473,31 @@ function DestinationsStage({
 // ─── Location Picker Sub-Flow ──────────────────────────────────────────────────
 
 function LocationPicker({
+  locations,
   onAdd,
   onCancel,
 }: {
+  locations: any[];
   onAdd: (dest: Destination) => void;
   onCancel: () => void;
 }) {
   const [step, setStep] = useState<LocationStep>('region');
-  const [selected, setSelected] = useState({ region: '', province: '', city: '' });
+  const [selected, setSelected] = useState({ regionId: '', regionName: '', provinceId: '', provinceName: '', cityId: '', cityName: '' });
   const [specificInput, setSpecificInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const regions = Object.keys(LOCATION_DATA);
-  const provinces = selected.region ? Object.keys(LOCATION_DATA[selected.region] || {}) : [];
-  const cities = selected.province ? LOCATION_DATA[selected.region]?.[selected.province] || [] : [];
-  const suggestions = getSuggestions(selected.city, specificInput);
+  const regionsData = locations.filter(l => (l.type || '').toLowerCase() === 'region').sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  const provincesData = selected.regionId ? locations.filter(l => (l.type || '').toLowerCase() === 'province' && l.parentId === selected.regionId).sort((a, b) => (a.name || '').localeCompare(b.name || '')) : [];
+  const citiesData = selected.provinceId ? locations.filter(l => (l.type || '').toLowerCase() === 'city' && l.parentId === selected.provinceId).sort((a, b) => (a.name || '').localeCompare(b.name || '')) : [];
+
+  const suggestions = getSuggestions(selected.cityName, specificInput);
 
   function handleAdd() {
     onAdd({
-      region: selected.region,
-      province: selected.province,
-      city: selected.city,
+      region: selected.regionName,
+      province: selected.provinceName,
+      city: selected.cityName,
       specificLocation: specificInput,
     });
   }
@@ -551,9 +538,9 @@ function LocationPicker({
                 stepNumbers[s] < stepNumbers[step] ? 'bg-green-50 text-green-700 border border-green-100' :
                 'bg-slate-100 text-slate-400'
               }`}>
-                {s === 'region' && (selected.region || 'Region')}
-                {s === 'province' && (selected.province || 'Province')}
-                {s === 'city' && (selected.city || 'City')}
+                {s === 'region' && (selected.regionName || 'Region')}
+                {s === 'province' && (selected.provinceName || 'Province')}
+                {s === 'city' && (selected.cityName || 'City')}
                 {s === 'input' && 'Specifics'}
               </span>
             </div>
@@ -563,21 +550,21 @@ function LocationPicker({
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="max-w-md mx-auto space-y-2">
-          {step === 'region' && regions.map((region) => (
-            <button key={region} onClick={() => { setSelected({ ...selected, region, province: '', city: '' }); setStep('province'); }} className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white hover:border-green-700 hover:shadow-md text-left transition-all group font-semibold text-sm text-slate-800">
-              {region} <ChevronRight size={18} className="text-slate-300 group-hover:text-green-700 group-hover:translate-x-1 transition-all" />
+          {step === 'region' && regionsData.map((region) => (
+            <button key={region.id} onClick={() => { setSelected({ ...selected, regionId: region.id, regionName: region.name, provinceId: '', provinceName: '', cityId: '', cityName: '' }); setStep('province'); }} className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white hover:border-green-700 hover:shadow-md text-left transition-all group font-semibold text-sm text-slate-800">
+              {region.name} <ChevronRight size={18} className="text-slate-300 group-hover:text-green-700 group-hover:translate-x-1 transition-all" />
             </button>
           ))}
 
-          {step === 'province' && provinces.map((province) => (
-            <button key={province} onClick={() => { setSelected({ ...selected, province, city: '' }); setStep('city'); }} className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white hover:border-green-700 hover:shadow-md text-left transition-all group font-semibold text-sm text-slate-800">
-              {province} <ChevronRight size={18} className="text-slate-300 group-hover:text-green-700 group-hover:translate-x-1 transition-all" />
+          {step === 'province' && provincesData.map((province) => (
+            <button key={province.id} onClick={() => { setSelected({ ...selected, provinceId: province.id, provinceName: province.name, cityId: '', cityName: '' }); setStep('city'); }} className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white hover:border-green-700 hover:shadow-md text-left transition-all group font-semibold text-sm text-slate-800">
+              {province.name} <ChevronRight size={18} className="text-slate-300 group-hover:text-green-700 group-hover:translate-x-1 transition-all" />
             </button>
           ))}
 
-          {step === 'city' && cities.map((city) => (
-            <button key={city} onClick={() => { setSelected({ ...selected, city }); setStep('input'); }} className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white hover:border-green-700 hover:shadow-md text-left transition-all group font-semibold text-sm text-slate-800">
-              {city} <ChevronRight size={18} className="text-slate-300 group-hover:text-green-700 group-hover:translate-x-1 transition-all" />
+          {step === 'city' && citiesData.map((city) => (
+            <button key={city.id} onClick={() => { setSelected({ ...selected, cityId: city.id, cityName: city.name }); setStep('input'); }} className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-white hover:border-green-700 hover:shadow-md text-left transition-all group font-semibold text-sm text-slate-800">
+              {city.name} <ChevronRight size={18} className="text-slate-300 group-hover:text-green-700 group-hover:translate-x-1 transition-all" />
             </button>
           ))}
 
@@ -608,7 +595,7 @@ function LocationPicker({
                   )}
                 </AnimatePresence>
               </div>
-              <div className="flex items-start gap-2 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
+              <div className="flex items-start gap-2 p-3 bg-slate-800 border border-blue-100 rounded-xl">
                  <AlertCircle size={16} className="text-blue-500 flex-shrink-0 mt-0.5" />
                  <p className="text-xs font-medium text-blue-800 leading-relaxed">
                    You can enter a barangay, street, landmark, or full address to help your driver locate you.
@@ -672,6 +659,13 @@ function BookingDetailsStage({
 
   const valid = details.startDate && details.startTime && details.endDate && details.endTime && !dateTimeError && availabilityWarning !== 'blocked';
   const today = new Date().toISOString().split('T')[0];
+
+  // B2.5 — Force driver to 'yes' if require_driver is true
+  useEffect(() => {
+    if (getFullConfig().booking.require_driver && details.professionalDriver !== 'yes') {
+      onChange({ ...details, professionalDriver: 'yes' });
+    }
+  }, []);
 
   useEffect(() => {
     if (details.startDate && details.startTime && details.endDate && details.endTime && !dateTimeError) {
@@ -771,17 +765,37 @@ function BookingDetailsStage({
           <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm">
              <div className="p-4 bg-slate-50 border-b border-slate-100">
                <h5 className="text-sm font-bold text-slate-900 flex items-center gap-2"><Users size={16} className="text-green-700"/> Driver Options</h5>
-               <p className="text-[10px] uppercase font-bold text-slate-500 mt-1 pl-6">Would you like a professional driver?</p>
+               <p className="text-[10px] uppercase font-bold text-slate-500 mt-1 pl-6">
+                 {getFullConfig().booking.require_driver 
+                   ? '✓ A professional driver is required for all bookings.' 
+                   : 'Would you like a professional driver?'}
+               </p>
              </div>
              <div className="p-4">
-                <select
-                  value={details.professionalDriver}
-                  onChange={(e) => update('professionalDriver', e.target.value)}
-                  className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 appearance-none outline-none focus:border-green-600"
-                >
-                  <option value="no">Self Drive (No Driver)</option>
-                  <option value="yes">Yes, include Driver (+₱1000)</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={getFullConfig().booking.require_driver ? 'yes' : details.professionalDriver}
+                    onChange={(e) => !getFullConfig().booking.require_driver && update('professionalDriver', e.target.value)}
+                    disabled={getFullConfig().booking.require_driver}
+                    className={`w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold appearance-none outline-none transition-all ${
+                      getFullConfig().booking.require_driver 
+                        ? 'text-slate-700 cursor-not-allowed opacity-75 focus:border-slate-200' 
+                        : 'text-slate-800 focus:border-green-600'
+                    }`}
+                  >
+                    <option value="no">Self Drive (No Driver)</option>
+                    <option value="yes">Yes, include Driver (+₱1000)</option>
+                  </select>
+                  {getFullConfig().booking.require_driver && (
+                    <Lock size={16} className="absolute right-12 top-1/2 -translate-y-1/2 text-amber-600 pointer-events-none" />
+                  )}
+                </div>
+                {getFullConfig().booking.require_driver && (
+                  <p className="text-xs text-amber-700 mt-2 flex items-start gap-2">
+                    <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                    <span>Professional driver service is mandatory for this booking type and has been automatically selected.</span>
+                  </p>
+                )}
              </div>
           </div>
 
@@ -995,20 +1009,7 @@ function ConfirmationStage({
                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Investment</span>
                      <span className="text-4xl font-black text-white" style={{ fontFamily: 'var(--font-heading)' }}>{formatCurrency(pricing.total)}</span>
                   </div>
-                  
-                  {/* Loyalty Points Preview */}
-                  <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4 flex items-center justify-between">
-                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-white shadow-lg shadow-green-500/20">
-                           <Check size={16} strokeWidth={3} />
-                        </div>
-                        <div>
-                           <p className="text-[10px] font-black text-green-400 uppercase tracking-widest">Loyalty Reward</p>
-                           <p className="text-xs text-white font-bold">Earn QuickPoints</p>
-                        </div>
-                     </div>
-                     <span className="text-lg font-black text-green-400">+{Math.floor(pricing.total * 0.01 + (pricing.days * 24 * 10))} pts</span>
-                  </div>
+
                </div>
             </div>
           </div>
@@ -1052,7 +1053,7 @@ function BookingSummaryStage({
   const totalBucketPrice = requests.reduce((acc, req) => acc + req.totalPrice, 0);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col h-full bg-slate-50/50">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col h-full bg-slate-800">
       <div className="pb-4">
         <h2 className="text-2xl font-bold text-slate-900 mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
           Vehicle Request Summary
@@ -1106,16 +1107,22 @@ function BookingSummaryStage({
                   </div>
 
                   <div className="flex items-center border-t border-slate-100 bg-slate-50/50">
-                    <button
-                      onClick={() => onEdit(req.id)}
-                      className="flex-1 flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-slate-600 hover:text-green-700 hover:bg-slate-100 transition-colors"
-                    >
+<button
+                        onClick={() => onEdit(req.id)}
+                        className="flex-1 flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-white"
+                        style={{ background: 'rgb(51,65,85)', color: 'white' }}
+                        onMouseOver={e => { (e.currentTarget as any).style.background = 'rgb(30,41,59)'; }}
+onMouseOut={e => { (e.currentTarget as any).style.background = 'rgb(51,65,85)'; }}
+                      >
                       <Edit3 size={14} /> Modify Request
                     </button>
                     <div className="w-[1px] h-6 bg-slate-200"></div>
                     <button
                       onClick={() => onRemove(req.id)}
-                      className="flex-1 flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 py-3.5 text-xs font-bold text-white"
+                      style={{ background: 'rgb(51,65,85)', color: 'white' }}
+                      onMouseOver={e => { (e.currentTarget as any).style.background = 'rgb(30,41,59)'; }}
+                      onMouseOut={e => { (e.currentTarget as any).style.background = 'rgb(51,65,85)'; }}
                     >
                       <Trash2 size={14} /> Remove
                     </button>
@@ -1348,7 +1355,6 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
 
   async function handleFinalConfirm() {
     setIsSubmitting(true);
-    const user = authClient.getCurrentUser();
     
     const firestore = db;
     if (!firestore) {
@@ -1358,13 +1364,31 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
     }
 
     try {
+      const user = authClient.getCurrentUser();
+      
       if (editMode && existingBooking) {
          // Singe Edit Mode
          const req = bookingRequests[0];
-         if (!req) return;
+         if (!req) {
+           alert("No booking request found.");
+           setIsSubmitting(false);
+           return;
+         }
+         
+         if (!req.details.startDate || !req.details.startTime || !req.details.endDate || !req.details.endTime) {
+           alert("Please fill in all date and time fields.");
+           setIsSubmitting(false);
+           return;
+         }
          
          const start = new Date(`${req.details.startDate}T${req.details.startTime}`);
          const end = new Date(`${req.details.endDate}T${req.details.endTime}`);
+         
+         if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+           alert("Invalid date or time selected.");
+           setIsSubmitting(false);
+           return;
+         }
          
          const ref = doc(firestore, 'bookings', existingBooking.id);
          await updateDoc(ref, {
@@ -1379,11 +1403,26 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
          
          setShowSuccess(true);
       } else {
+        if (bookingRequests.length === 0) {
+          alert("No booking requests to submit.");
+          setIsSubmitting(false);
+          return;
+        }
+        
         // Create a booking document in Firebase for each request in the bucket
         const pricingMode = getPricingBehaviorMode();
         const bookingPromises = bookingRequests.map(req => {
+          if (!req.details.startDate || !req.details.startTime || !req.details.endDate || !req.details.endTime) {
+            throw new Error("Please fill in all date and time fields.");
+          }
+          
           const start = new Date(`${req.details.startDate}T${req.details.startTime}`);
           const end = new Date(`${req.details.endDate}T${req.details.endTime}`);
+          
+          if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            throw new Error("Invalid date or time selected.");
+          }
+          
           const withDriver = req.details.professionalDriver === 'yes';
           const driverFee = withDriver ? 1000 : 0;
           
@@ -1393,13 +1432,13 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
           const priceBreakdown = shouldStorePriceAtBookingTime() ? {
             baseTotal: req.totalPrice - (withDriver ? 1000 : 0),
             driverFee: withDriver ? 1000 : 0,
-            totalHours: pInfo.days * 24, // Approximation
-            blocks24h: pInfo.days,
+            totalHours: (pInfo.days || 0) * 24,
+            blocks24h: pInfo.days || 0,
             blocks12h: 0,
             extraHours: 0,
             hourlyRate: 200,
-            rate12h: pInfo.ratePerDay / 2,
-            rate24h: pInfo.ratePerDay,
+            rate12h: (pInfo.ratePerDay || 0) / 2,
+            rate24h: pInfo.ratePerDay || 0,
             matchedLocationId: 'dynamic',
             matchedLocationName: req.destinations.map(d => d.city).join(', '),
             carTypeId: req.car.car_type_id || '',
@@ -1485,7 +1524,7 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
              />
           ) : stage === 'destinations' ? (
              showLocationPicker ? (
-                <LocationPicker onAdd={handleAddDestination} onCancel={() => setShowLocationPicker(false)} />
+                <LocationPicker locations={locations} onAdd={handleAddDestination} onCancel={() => setShowLocationPicker(false)} />
              ) : (
                 <DestinationsStage
                   destinations={destinations}

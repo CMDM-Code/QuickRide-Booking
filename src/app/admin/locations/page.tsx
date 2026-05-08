@@ -359,179 +359,216 @@ export default function LocationManagementPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="flex flex-col gap-6 min-h-[calc(100vh-140px)] h-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
         <div>
           <h1 className="text-3xl font-black text-slate-900 leading-tight">Location Management</h1>
-          <p className="text-slate-600">Infinite nesting using parent chain fallback (most specific → root → default).</p>
+          <p className="text-slate-600">Infinite nesting with parent chain fallback.</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={refresh} className="p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50">🔄</button>
-          <FilterDropdown
-            filters={filterConfigs}
-            onApply={(filters) => setActiveFilters(filters)}
-          >
-            {() => (
-              <button onClick={() => startCreate()} className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-black">
-                Add Root Location
-              </button>
-            )}
-          </FilterDropdown>
+          <button onClick={refresh} className="p-3 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-colors">🔄</button>
+          <button onClick={() => startCreate()} className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg shadow-slate-200">
+            Create Root
+          </button>
         </div>
       </div>
 
-      {/* Create/Edit Form */}
-      {showForm && (
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-6 animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <h2 className="text-lg font-black text-slate-900">{editingId ? "Edit Location" : "Create Location"}</h2>
-            <button onClick={resetForm} className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200">
-              Cancel
-            </button>
+      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-6">
+        {/* Left Panel: Navigation Tree */}
+        <div className="md:col-span-4 flex flex-col gap-4 min-h-0 bg-white rounded-3xl-plus border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 space-y-3 shrink-0">
+             <div className="flex items-center justify-between gap-2">
+               <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">Hierarchy</h2>
+               <FilterDropdown
+                filters={filterConfigs}
+                onApply={(filters) => setActiveFilters(filters)}
+              />
+             </div>
+             <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search locations..."
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 font-bold text-sm text-slate-700 outline-none focus:ring-4 focus:ring-green-500/10 focus:border-green-500 transition-all"
+            />
           </div>
-
-          <div className="grid md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Name</label>
-              <input
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none font-bold"
-                placeholder="e.g. Davao Region, South Cotabato"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Level</label>
-              <SearchableDropdown
-                options={levelDropdownOptions}
-                value={form.levelId}
-                onChange={(v) => setForm((p) => ({ ...p, levelId: v as string }))}
-                placeholder="Select a level..."
-                disabled={(editingId || "").toLowerCase() === "default"}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Parent</label>
-              <SearchableDropdown
-                options={parentOptions}
-                value={form.parentId}
-                onChange={(v) => setForm((p) => ({ ...p, parentId: v as string }))}
-                placeholder="(no parent)"
-                disabled={(editingId || "").toLowerCase() === "default"}
-              />
-              <p className="text-[10px] text-slate-500 mt-2 font-semibold">Parent chain defines fallback priority.</p>
-            </div>
-
-            <div className="md:col-span-3 flex items-center justify-between pt-2">
-              {editingId && (
-                <button
-                  onClick={() => remove(editingId)}
-                  disabled={(editingId || "").toLowerCase() === "default"}
-                  className="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold hover:bg-red-100 disabled:opacity-50"
-                >
-                  Delete Location
-                </button>
-              )}
-              <div className="flex-1" />
-              <button
-                onClick={save}
-                disabled={saving}
-                className={`px-8 py-3 rounded-xl font-bold transition-all shadow-lg ${
-                  saving ? "bg-slate-300 text-slate-600" : "bg-green-700 hover:bg-green-800 text-white"
-                }`}
-              >
-                {saving ? "Saving..." : editingId ? "Save Changes" : "Create Location"}
-              </button>
-            </div>
+          
+          <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+            <LocationTree
+              nodes={treeNodes}
+              byId={treeById}
+              children={tree.children}
+              roots={filteredRoots}
+              selectedId={selectedId}
+              onSelect={(id) => {
+                setSelectedId(id);
+                if (id) startEdit(id);
+                else resetForm();
+              }}
+              searchQuery={search}
+              onAddChild={(parentId) => startCreate(parentId)}
+              onEdit={(id) => startEdit(id)}
+              onChangeParent={(id) => {
+                setChangingParentId(id);
+                setNewParentId(tree.byId[id]?.parentId || "");
+              }}
+            />
           </div>
         </div>
-      )}
 
-      {/* Change Parent Modal */}
+        {/* Right Panel: Details/Editor */}
+        <div className="md:col-span-8 flex flex-col min-h-0 bg-white rounded-3xl-plus border border-slate-200 shadow-sm overflow-hidden">
+          {showForm ? (
+            <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900">{editingId ? "Edit Location" : "New Location"}</h2>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter mt-0.5">
+                    {editingId ? `ID: ${editingId}` : "Adding to collection"}
+                  </p>
+                </div>
+                <button onClick={resetForm} className="p-2 bg-slate-100 text-slate-500 hover:text-slate-900 rounded-xl transition-all">
+                  <span className="sr-only">Close</span>
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                <div className="max-w-2xl space-y-8">
+                  <div className="space-y-4">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">General Information</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700 ml-1">Display Name</label>
+                        <input
+                          value={form.name}
+                          onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                          className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none font-bold text-base transition-all"
+                          placeholder="e.g. Davao City"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700 ml-1">Classification Level</label>
+                        <SearchableDropdown
+                          options={levelDropdownOptions}
+                          value={form.levelId}
+                          onChange={(v) => setForm((p) => ({ ...p, levelId: v as string }))}
+                          placeholder="Select level..."
+                          disabled={(editingId || "").toLowerCase() === "default"}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">Hierarchy Placement</label>
+                    <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200 border-dashed">
+                       <label className="text-sm font-bold text-slate-700 block mb-3">Parent Location</label>
+                       <SearchableDropdown
+                          options={parentOptions}
+                          value={form.parentId}
+                          onChange={(v) => setForm((p) => ({ ...p, parentId: v as string }))}
+                          placeholder="(no parent — root)"
+                          disabled={(editingId || "").toLowerCase() === "default"}
+                        />
+                        <div className="mt-4 flex items-start gap-3 p-3 bg-blue-50/50 rounded-2xl border border-blue-100">
+                           <span className="text-lg">💡</span>
+                           <p className="text-xs font-bold text-blue-800 leading-relaxed">
+                             This location will inherit pricing rules from its parent if specific rates are not defined.
+                           </p>
+                        </div>
+                    </div>
+                  </div>
+
+                  {editingId && (editingId || "").toLowerCase() !== "default" && (
+                    <div className="pt-8 border-t border-slate-100">
+                       <button
+                        onClick={() => remove(editingId)}
+                        className="flex items-center gap-2 px-5 py-3 bg-red-50 text-red-600 hover:bg-red-100 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border border-red-100"
+                      >
+                        Delete Permanently
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end shrink-0">
+                 <button
+                  onClick={save}
+                  disabled={saving}
+                  className={`px-10 py-4 rounded-2xl font-black text-lg transition-all shadow-xl active:scale-95 ${
+                    saving ? "bg-slate-300 text-slate-500" : "bg-green-700 hover:bg-green-800 text-white shadow-green-700/20"
+                  }`}
+                >
+                  {saving ? "Saving..." : editingId ? "Update Location" : "Create Location"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
+               <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 border border-slate-100">
+                 <span className="text-4xl text-slate-300">📍</span>
+               </div>
+               <h3 className="text-xl font-black text-slate-900 mb-2">Select a Location</h3>
+               <p className="text-slate-500 max-w-xs mx-auto text-sm leading-relaxed">
+                 Choose a location from the left panel to edit its details, manage children, or reassign its parent.
+               </p>
+               <button onClick={() => startCreate()} className="mt-8 px-6 py-3 bg-white border border-slate-200 rounded-2xl text-slate-900 font-bold hover:bg-slate-50 transition-all shadow-sm">
+                 Create New Root
+               </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Change Parent Modal (Keep as is, but style it more) */}
       {changingParentId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-visible">
-            <div className="p-6 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">Change Parent</h2>
-              <p className="text-sm text-slate-500 mt-1">
-                Moving <strong>{tree.byId[changingParentId]?.name}</strong> — all children will automatically follow.
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl-plus shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 scale-in-95 duration-300">
+            <div className="p-8 border-b border-slate-100 bg-slate-50">
+              <h2 className="text-2xl font-black text-slate-900 leading-tight">Reparent Node</h2>
+              <p className="text-sm font-bold text-slate-500 mt-2">
+                Moving <span className="text-green-700">{tree.byId[changingParentId]?.name}</span>
               </p>
             </div>
-            <div className="p-6">
-              <SearchableDropdown
-                options={parentOptions.filter((o) => o.value !== changingParentId)}
-                value={newParentId}
-                onChange={(v) => setNewParentId(v as string)}
-                placeholder="Select new parent..."
-              />
+            <div className="p-8 space-y-6">
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Target Parent</label>
+                <SearchableDropdown
+                  options={parentOptions.filter((o) => o.value !== changingParentId)}
+                  value={newParentId}
+                  onChange={(v) => setNewParentId(v as string)}
+                  placeholder="Select new parent..."
+                />
+              </div>
+              <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 flex gap-3">
+                 <span className="text-lg">⚠️</span>
+                 <p className="text-[11px] font-bold text-orange-800 leading-normal">
+                   All sub-locations under this node will also be moved. This may affect inherited pricing for the entire branch.
+                 </p>
+              </div>
             </div>
-            <div className="p-6 bg-slate-50 flex gap-3">
-              <button
-                onClick={handleChangeParent}
-                disabled={saving}
-                className="flex-1 px-4 py-3 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl transition-all"
-              >
-                {saving ? "Moving..." : "Apply"}
-              </button>
-              <button
+            <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex gap-3">
+               <button
                 onClick={() => {
                   setChangingParentId(null);
                   setNewParentId("");
                 }}
-                className="px-4 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-all"
+                className="flex-1 px-4 py-4 bg-white border border-slate-200 text-slate-700 font-bold rounded-2xl hover:bg-slate-50 transition-all"
               >
                 Cancel
+              </button>
+              <button
+                onClick={handleChangeParent}
+                disabled={saving}
+                className="flex-[2] px-4 py-4 bg-slate-900 hover:bg-black text-white font-bold rounded-2xl transition-all shadow-xl shadow-slate-200 disabled:opacity-50"
+              >
+                {saving ? "Moving..." : "Apply Move"}
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Search */}
-      <div className="flex items-center justify-between gap-3">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, level, id..."
-          className="px-4 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm text-slate-700 outline-none w-[360px]"
-        />
-        <div className="flex items-center gap-3">
-          <div className="text-sm font-bold text-slate-600">
-            {locations.length} locations • {levels.length} levels
-          </div>
-        </div>
-      </div>
-
-      {/* Location Tree */}
-      <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-4">
-        <LocationTree
-          nodes={treeNodes}
-          byId={treeById}
-          children={tree.children}
-          roots={filteredRoots}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          searchQuery={search}
-          onAddChild={(parentId) => startCreate(parentId)}
-          onEdit={(id) => startEdit(id)}
-          onChangeParent={(id) => {
-            setChangingParentId(id);
-            setNewParentId(tree.byId[id]?.parentId || "");
-          }}
-        />
-      </div>
-
-      {/* Info Box */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <h3 className="font-bold text-blue-900 mb-2">💡 Location Tree</h3>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Click a location to select it and see action buttons.</li>
-          <li>• Use <strong>Parent</strong> to change hierarchy — children auto-follow.</li>
-          <li>• Use <strong>Child</strong> to create nested locations.</li>
-          <li>• Locations without a level show as <span className="bg-orange-50 text-orange-500 px-1 rounded text-xs font-bold">unregistered</span>.</li>
-          <li>• Pricing uses parent chain fallback (most specific → root → default).</li>
-        </ul>
-      </div>
     </div>
   );
 }

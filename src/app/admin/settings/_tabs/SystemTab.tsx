@@ -1,63 +1,172 @@
 'use client';
-import { SystemBehaviorSettings } from '@/lib/settings-service';
+import { useState } from 'react';
+import { SystemBehaviorSettings, NotificationSettings } from '@/lib/settings-service';
+import { ROLE_DEFINITIONS } from '@/lib/roles';
 import { Section, Field, Input, Toggle, RadioGroup } from './shared';
+import { ChevronDown, ChevronUp, ShieldCheck, Users } from 'lucide-react';
 
-interface Props { data: SystemBehaviorSettings; onChange: (d: SystemBehaviorSettings) => void; }
-export default function SystemTab({ data, onChange }: Props) {
-  const upd = <K extends keyof SystemBehaviorSettings>(k: K, v: SystemBehaviorSettings[K]) => onChange({ ...data, [k]: v });
+interface Props {
+  system: SystemBehaviorSettings;
+  notifications: NotificationSettings;
+  onSystem: (d: SystemBehaviorSettings) => void;
+  onNotifications: (d: NotificationSettings) => void;
+}
+
+const TRIGGERS: { key: keyof NotificationSettings; label: string; urgent?: boolean }[] = [
+  { key: 'trigger_booking_created',  label: 'Booking Created' },
+  { key: 'trigger_booking_approved', label: 'Booking Approved', urgent: true },
+  { key: 'trigger_booking_rejected', label: 'Booking Rejected', urgent: true },
+  { key: 'trigger_payment_received', label: 'Payment Received', urgent: true },
+  { key: 'trigger_payment_failed',   label: 'Payment Failed',   urgent: true },
+  { key: 'trigger_refund_processed', label: 'Refund Processed', urgent: true },
+];
+
+export default function SystemTab({ system, notifications, onSystem, onNotifications }: Props) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const sUpd = <K extends keyof SystemBehaviorSettings>(k: K, v: SystemBehaviorSettings[K]) =>
+    onSystem({ ...system, [k]: v });
+  const nUpd = <K extends keyof NotificationSettings>(k: K, v: NotificationSettings[K]) =>
+    onNotifications({ ...notifications, [k]: v });
+
   return (
     <div className="space-y-4">
-      <Section title="Audit Logging" description="All critical mutations are logged with before/after snapshots.">
-        <Toggle label="Enable Audit Logging" description="Recommended: Full mode for production." checked={data.audit_logging_enabled} onChange={v => upd('audit_logging_enabled', v)} />
-        {data.audit_logging_enabled && (
+      {/* ── Maintenance ── */}
+      <Section title="Maintenance Mode" description="Controls whether the platform is in maintenance. Blocks client-facing operations.">
+        <Toggle label="Enable Maintenance Mode"  description="Activate to block bookings and payments for non-admins." checked={system.maintenance_enabled}               onChange={v => sUpd('maintenance_enabled', v)} />
+        {system.maintenance_enabled && (
           <>
-            <RadioGroup label="Log Level" value={data.log_level} onChange={v => upd('log_level', v)} options={[
-              { value: 'minimal', label: 'Minimal', description: 'Only critical events (status changes, payments).' },
-              { value: 'full',    label: 'Full',    description: 'Every mutation with before/after snapshots. Recommended.' },
-            ]} />
-            <Field label="Audit Log Retention (days)" hint="Logs older than this are eligible for archiving.">
-              <Input type="number" min={7} value={data.audit_retention_days} onChange={e => upd('audit_retention_days', +e.target.value)} className="max-w-xs" />
-            </Field>
+            <Toggle label="Allow Admin Bypass"         description="Admins can still access the platform during maintenance."     checked={system.maintenance_allow_admin_bypass}          onChange={v => sUpd('maintenance_allow_admin_bypass', v)} />
+            <Toggle label="Block Booking Creation"     description="Prevents new bookings from being created."                    checked={system.maintenance_blocks_booking_creation}    onChange={v => sUpd('maintenance_blocks_booking_creation', v)} />
+            <Toggle label="Block Payment Processing"   description="Prevents all payment submissions."                           checked={system.maintenance_blocks_payment_processing}  onChange={v => sUpd('maintenance_blocks_payment_processing', v)} />
           </>
         )}
       </Section>
 
-      <Section title="Data Retention">
-        <Field label="Chat Retention Policy" hint="Natural language description (e.g. '365 days', '2 years').">
-          <Input value={data.chat_retention_policy} onChange={e => upd('chat_retention_policy', e.target.value)} />
-        </Field>
+      {/* ── Audit Logging ── */}
+      <Section title="Audit Logging" description="All critical mutations are logged with before/after snapshots.">
+        <Toggle label="Enable Audit Logging" description="Recommended: Full mode for production." checked={system.audit_logging_enabled} onChange={v => sUpd('audit_logging_enabled', v)} />
       </Section>
 
-      <Section title="Maintenance Mode" description="Controls whether the platform is in maintenance. Blocks client-facing operations.">
-        <Toggle label="Enable Maintenance Mode"       description="Activate to block bookings and payments for non-admins." checked={data.maintenance_enabled}                     onChange={v => upd('maintenance_enabled', v)} />
-        <Toggle label="Allow Admin Bypass"            description="Admins can still access the platform during maintenance."  checked={data.maintenance_allow_admin_bypass}          onChange={v => upd('maintenance_allow_admin_bypass', v)} />
-        <Toggle label="Block Booking Creation"        description="Prevents new bookings from being created."                 checked={data.maintenance_blocks_booking_creation}    onChange={v => upd('maintenance_blocks_booking_creation', v)} />
-        <Toggle label="Block Payment Processing"      description="Prevents all payment submissions."                         checked={data.maintenance_blocks_payment_processing}  onChange={v => upd('maintenance_blocks_payment_processing', v)} />
-      </Section>
-
-      <Section title="Session & Late Fee Policy">
+      {/* ── Session & Fees ── */}
+      <Section title="Session &amp; Fee Policy">
         <Field label="Session Timeout (minutes)" hint="Auto-logout after inactivity. Min 15, Max 480.">
-          <Input type="number" min={15} max={480} value={data.sessionTimeoutMinutes} onChange={e => upd('sessionTimeoutMinutes', Math.max(15, Math.min(480, +e.target.value)))} className="max-w-xs" />
+          <Input type="number" min={15} max={480} value={system.sessionTimeoutMinutes} onChange={e => sUpd('sessionTimeoutMinutes', Math.max(15, Math.min(480, +e.target.value)))} className="max-w-xs" />
         </Field>
-        <Field label="Tax Rate (%)" hint="Applied on top of booking total.">
-          <Input type="number" min={0} max={100} step={0.5} value={data.taxRate} onChange={e => upd('taxRate', +e.target.value)} className="max-w-xs" />
+        <Field label="Tax Rate (%)" hint="Applied on top of booking total (e.g. 12 = 12% VAT).">
+          <Input type="number" min={0} max={100} step={0.5} value={system.taxRate} onChange={e => sUpd('taxRate', +e.target.value)} className="max-w-xs" />
         </Field>
-        <RadioGroup label="Late Return Fee Method" value={data.lateFeeMethod} onChange={v => upd('lateFeeMethod', v)} options={[
-          { value: 'hourly_rate',  label: 'Hourly Rate (Rounded Up)', description: 'Charges +1 hour of rental cost per hour late.' },
-          { value: 'flat_amount',  label: 'Flat Amount',              description: `Fixed fee of ₱${data.lateFeeFlat} regardless of lateness.` },
-          { value: 'percentage',   label: 'Percentage of Total',      description: `${data.lateFeePercent}% of the total booking cost.` },
-        ]} />
-        {data.lateFeeMethod === 'flat_amount' && (
+        <RadioGroup
+          label="Late Return Fee Method"
+          value={system.lateFeeMethod}
+          onChange={v => sUpd('lateFeeMethod', v)}
+          options={[
+            { value: 'hourly_rate', label: 'Hourly Rate (Rounded Up)', description: 'Charges +1 hour of rental cost per hour late.' },
+            { value: 'flat_amount', label: 'Flat Amount',              description: `Fixed fee of ₱${system.lateFeeFlat} regardless of lateness.` },
+            { value: 'percentage',  label: 'Percentage of Total',      description: `${system.lateFeePercent}% of the total booking cost.` },
+          ]}
+        />
+        {system.lateFeeMethod === 'flat_amount' && (
           <Field label="Flat Late Fee (₱)">
-            <Input type="number" min={0} value={data.lateFeeFlat} onChange={e => upd('lateFeeFlat', +e.target.value)} className="max-w-xs" />
+            <Input type="number" min={0} value={system.lateFeeFlat} onChange={e => sUpd('lateFeeFlat', +e.target.value)} className="max-w-xs" />
           </Field>
         )}
-        {data.lateFeeMethod === 'percentage' && (
+        {system.lateFeeMethod === 'percentage' && (
           <Field label="Late Fee Percentage (%)">
-            <Input type="number" min={0} max={100} step={0.5} value={data.lateFeePercent} onChange={e => upd('lateFeePercent', +e.target.value)} className="max-w-xs" />
+            <Input type="number" min={0} max={100} step={0.5} value={system.lateFeePercent} onChange={e => sUpd('lateFeePercent', +e.target.value)} className="max-w-xs" />
           </Field>
         )}
       </Section>
+
+      {/* ── Notification Channels ── */}
+      <Section title="Notifications" description="Configure notification delivery and event triggers.">
+        <Toggle label="In-App Notifications" description="Real-time bell notifications inside the platform." checked={notifications.in_app_notifications} onChange={v => nUpd('in_app_notifications', v)} />
+        <Toggle label="Email Notifications"  description="Send email alongside in-app for key events."      checked={notifications.email_notifications}    onChange={v => nUpd('email_notifications', v)} />
+      </Section>
+
+      {/* ── Role Permissions Info Card (A8) ── */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+        <div className="flex items-center gap-3 pb-4 border-b border-slate-100 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+            <ShieldCheck className="w-4 h-4 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-base font-black text-slate-900">Role Permissions</h2>
+            <p className="text-xs text-slate-400 font-medium">Fixed system roles — not configurable</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {(Object.entries(ROLE_DEFINITIONS) as [string, typeof ROLE_DEFINITIONS['admin']][]).map(([roleKey, role]) => (
+            <div key={roleKey} className="rounded-xl border border-slate-100 p-4 space-y-2">
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="w-4 h-4 text-slate-500" />
+                <p className="font-black text-sm text-slate-800">{role.label}</p>
+              </div>
+              <div className="space-y-1">
+                {(Object.entries(role.permissions) as [string, boolean][]).map(([perm, allowed]) => (
+                  <div key={perm} className="flex items-center gap-2 text-xs">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${allowed ? 'bg-green-500' : 'bg-slate-200'}`} />
+                    <span className={allowed ? 'text-slate-700 font-medium' : 'text-slate-400'}>
+                      {perm.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Advanced ── */}
+      <button
+        onClick={() => setShowAdvanced(v => !v)}
+        className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors pt-1"
+      >
+        {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        {showAdvanced ? 'Hide Advanced Settings' : 'Show Advanced Settings'}
+      </button>
+
+      {showAdvanced && (
+        <>
+          <Section title="Advanced Logging">
+            {system.audit_logging_enabled && (
+              <>
+                <RadioGroup
+                  label="Log Level"
+                  value={system.log_level}
+                  onChange={v => sUpd('log_level', v)}
+                  options={[
+                    { value: 'minimal', label: 'Minimal', description: 'Only critical events (status changes, payments).' },
+                    { value: 'full',    label: 'Full',    description: 'Every mutation with before/after snapshots. Recommended.' },
+                  ]}
+                />
+                <Field label="Audit Log Retention (days)" hint="Logs older than this are eligible for archiving.">
+                  <Input type="number" min={7} value={system.audit_retention_days} onChange={e => sUpd('audit_retention_days', +e.target.value)} className="max-w-xs" />
+                </Field>
+              </>
+            )}
+            <Field label="Chat Retention Policy" hint="Natural language description (e.g. '90 days', '1 year').">
+              <Input value={system.chat_retention_policy} onChange={e => sUpd('chat_retention_policy', e.target.value)} />
+            </Field>
+          </Section>
+
+          <Section title="Notification Event Triggers" description="Choose which events generate in-app and email notifications.">
+            {TRIGGERS.map(t => (
+              <Toggle
+                key={t.key}
+                label={t.label + (t.urgent ? ' ⚡' : '')}
+                checked={notifications[t.key] as boolean}
+                onChange={v => nUpd(t.key, v as any)}
+              />
+            ))}
+            <Toggle
+              label="Urgency-Only Flag"
+              description="When on, only notifications marked urgent are shown in priority views."
+              checked={notifications.urgency_only_flag}
+              onChange={v => nUpd('urgency_only_flag', v)}
+            />
+          </Section>
+        </>
+      )}
     </div>
   );
 }

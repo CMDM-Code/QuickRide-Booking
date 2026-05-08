@@ -9,8 +9,11 @@ import { collection, query, where, getDocs, updateDoc, doc, Timestamp } from "fi
 import ModernBookingFlow from "@/components/forms/ModernBookingFlow";
 import ChatWindow from "@/components/ui/ChatWindow";
 import InviteModal from "@/components/modals/InviteModal";
-import { MessageSquare, UserPlus, Users, CheckCircle, XCircle } from "lucide-react";
+import BookingModal from "@/components/modals/BookingModal";
+import BookingDetailContent from "@/components/modals/BookingDetailContent";
+import { MessageSquare, UserPlus, Users, CheckCircle, XCircle, Eye, AlertCircle } from "lucide-react";
 import { fetchUserBookings, fetchPendingInvites, acceptInvite, declineInvite } from "@/lib/booking-access-service";
+import { getRemainingBalance } from "@/lib/payment-service";
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -20,6 +23,7 @@ export default function BookingsPage() {
   const [editingBooking, setEditingBooking] = useState<any | null>(null);
   const [activeChat, setActiveChat] = useState<any | null>(null);
   const [activeInvite, setActiveInvite] = useState<any | null>(null);
+  const [selectedBookingForDetails, setSelectedBookingForDetails] = useState<any | null>(null);
   const [pendingInvites, setPendingInvites] = useState<any[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -228,7 +232,7 @@ export default function BookingsPage() {
                         <p className="text-sm font-medium text-slate-500 mt-0.5">Booking ID: {booking.id.slice(0,8)}</p>
                     </div>
                     
-                    <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-100 space-y-2 text-sm">
+                    <div className="bg-slate-900 rounded-xl p-4 border border-slate-100 space-y-2 text-sm">
                         <div className="flex gap-2">
                             <span className="font-bold text-slate-700 w-16">Dates:</span>
                             <span className="text-slate-600">
@@ -249,12 +253,49 @@ export default function BookingsPage() {
                         </div>
                     </div>
                     <p className="text-xl font-black text-green-700 mt-2">₱{booking.total_price?.toLocaleString() || 0}</p>
+                    
+                    {/* Payment Status Badge */}
+                    {booking.payment_status && (
+                      <div className="flex items-center gap-2 mt-3">
+                        {booking.payment_status === 'paid' && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
+                            <CheckCircle className="w-3 h-3" />
+                            Paid
+                          </span>
+                        )}
+                        {booking.payment_status === 'partial' && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 border border-orange-200">
+                            <AlertCircle className="w-3 h-3" />
+                            Partially Paid
+                          </span>
+                        )}
+                        {booking.payment_status === 'pending' && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                            ⏱ Pending
+                          </span>
+                        )}
+                        {booking.payment_status === 'failed' && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
+                            <AlertCircle className="w-3 h-3" />
+                            Failed
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col md:items-end gap-3 min-w-[140px]">
                     <span className={`inline-flex items-center justify-center px-4 py-1.5 rounded-full text-xs font-bold border ${getStatusBadgeColor(booking.status)} uppercase tracking-wider`}>
                       {booking.status}
                     </span>
                     <div className="flex flex-wrap md:justify-end gap-2">
+                      <button
+                        onClick={() => setSelectedBookingForDetails(booking)}
+                        className="flex items-center gap-2 text-slate-600 hover:text-slate-800 text-sm font-bold bg-slate-50 hover:bg-slate-100 px-4 py-2 rounded-xl transition-all active:scale-95"
+                      >
+                        <Eye className="w-4 h-4" />
+                        Details
+                      </button>
+                      
                       <button
                         onClick={() => setActiveChat({
                           id: booking.id,
@@ -374,6 +415,22 @@ export default function BookingsPage() {
             />
           </div>
         )}
+
+        {/* Booking Detail Modal */}
+        <BookingModal 
+          isOpen={!!selectedBookingForDetails} 
+          onClose={() => setSelectedBookingForDetails(null)}
+        >
+          {selectedBookingForDetails && (
+            <BookingDetailContent 
+              booking={selectedBookingForDetails}
+              onPaymentSuccess={() => {
+                const user = authClient.getCurrentUser();
+                if (user) fetchBookings(user.id);
+              }}
+            />
+          )}
+        </BookingModal>
       </div>
   );
 }

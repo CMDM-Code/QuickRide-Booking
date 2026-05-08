@@ -83,7 +83,7 @@ export default function Navbar() {
                   </button>
 
                   {isDropdownOpen && (
-                    <div className="absolute right-0 mt-3 w-56 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl py-2 z-10 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+                    <div className="absolute right-0 mt-3 w-56 bg-slate-800/90 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl py-2 z-10 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
                       <div className="px-4 py-3 border-b border-slate-100 mb-1">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Account</p>
                         <p className="text-sm font-bold text-slate-900 truncate">{userName}</p>

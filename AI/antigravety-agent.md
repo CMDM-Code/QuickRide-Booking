@@ -12,6 +12,7 @@ Always prioritize:
 * Always analyze the task before writing code
 * Break problems into smaller steps
 * Avoid unnecessary complexity
+* Always create an implementation plan to be confirmed by the user before implementing.
 
 2. Code Quality Standards
 * Write clean, readable, and modular code

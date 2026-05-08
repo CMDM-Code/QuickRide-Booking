@@ -23,6 +23,8 @@ import {
   Moon,
   Sun,
   MessageCircle,
+  MapPin,
+  DollarSign
 } from 'lucide-react';
 
 // Role type for dashboard variants
@@ -67,22 +69,7 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-  const [isDark, setIsDark] = useState(false);
-
-  // Sync dark mode on mount and toggling
-  useEffect(() => {
-    const saved = localStorage.getItem('qr-dark-mode');
-    const dark = saved === 'true' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    setIsDark(dark);
-    document.documentElement.classList.toggle('dark', dark);
-  }, []);
-
-  function toggleDark() {
-    const next = !isDark;
-    setIsDark(next);
-    document.documentElement.classList.toggle('dark', next);
-    localStorage.setItem('qr-dark-mode', String(next));
-  }
+  // Theme now controlled by BrandingProvider; no forced dark mode here
 
   // Role-based navigation
   const navigation: Record<DashboardRole, NavItem[]> = {
@@ -90,6 +77,8 @@ export function DashboardShell({
       { label: 'Dashboard', href: '/admin/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
       { label: 'Bookings', href: '/admin/bookings', icon: <Calendar className="w-5 h-5" />, badge: 12 },
       { label: 'Vehicles', href: '/admin/vehicles', icon: <Car className="w-5 h-5" /> },
+      { label: 'Locations', href: '/admin/locations', icon: <MapPin className="w-5 h-5" /> },
+      { label: 'Pricing', href: '/admin/pricing', icon: <DollarSign className="w-5 h-5" /> },
       { label: 'Staff/Users', href: '/admin/users', icon: <Users className="w-5 h-5" /> },
       { label: 'Reports', href: '/admin/reports', icon: <FileText className="w-5 h-5" /> },
       { label: 'Audit Logs', href: '/admin/audit-logs', icon: <FileText className="w-5 h-5" /> },
@@ -105,7 +94,7 @@ export function DashboardShell({
       { label: 'Home', href: '/', icon: <Home className="w-5 h-5" /> },
       { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
       { label: 'My Bookings', href: '/dashboard/bookings', icon: <Calendar className="w-5 h-5" /> },
-      { label: 'Book a Ride', href: '/fleet', icon: <Car className="w-5 h-5" /> },
+
       { label: 'Live Support', href: '/dashboard/support', icon: <MessageCircle className="w-5 h-5" /> },
       { label: 'Profile', href: '/dashboard/settings', icon: <User className="w-5 h-5" /> },
     ]
@@ -161,7 +150,7 @@ export function DashboardShell({
         <nav className="flex-1 overflow-y-auto overscroll-contain py-6 px-4 min-h-0">
           <ul className="space-y-1">
             {navItems.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+              const isActive = pathname === item.href || (pathname.startsWith(item.href + '/') && item.href !== '/dashboard');
               
               return (
                 <li key={item.href}>
@@ -252,19 +241,10 @@ export function DashboardShell({
                   {roleLabels[role]} Portal
                 </p>
               </div>
+
             </div>
 
-            {/* Right: Actions */}
             <div className="flex items-center gap-3">
-              {/* Dark Mode Toggle */}
-              <button
-                onClick={toggleDark}
-                className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              >
-                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </button>
-
               {/* Notifications */}
               <button className="relative p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
                 <Bell className="w-5 h-5" />

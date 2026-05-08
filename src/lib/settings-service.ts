@@ -48,12 +48,12 @@ export interface PaymentSettings {
 
 // ─── 4. PRICING ────────────────────────────────────────────────────────────
 export interface PricingSettings {
-  pricing_mode: 'locked' | 'recalculated';
+  // pricing_mode removed (A4) — always locked at submission
   rounding_rule: 'ceil' | 'floor' | 'nearest';
   allow_staff_pricing_override: boolean;
   allow_admin_pricing_override: boolean;
-  scheduled_pricing_enabled: boolean;
-  overlap_resolution: 'priority_based' | 'latest_created_wins';
+  // scheduled_pricing_enabled removed (A3)
+  // overlap_resolution removed (A4) — always block
 }
 
 // ─── 5. AVAILABILITY ───────────────────────────────────────────────────────
@@ -80,8 +80,8 @@ export interface VehicleSettings {
 export interface ChatSettings {
   booking_chat_enabled: boolean;
   support_chat_enabled: boolean;
-  support_mode: 'ticket_based' | 'group_based';
-  support_assignment_mode: 'auto' | 'manual';
+  // support_mode removed (A9) — single unified inbox
+  // support_assignment_mode removed (A9) — first reply auto-assigns
   allow_client_chat_edit: boolean;
   allow_client_chat_delete: boolean;
   allow_staff_chat_moderation: boolean;
@@ -105,22 +105,8 @@ export interface NotificationSettings {
 // Branding is handled by src/lib/branding-service.ts + /admin/settings/branding
 
 // ─── 10. ROLES & PERMISSIONS ───────────────────────────────────────────────
-export interface RolePermission {
-  role_id: string;
-  role_name: string;
-  permissions: {
-    bookings: boolean;
-    payments: boolean;
-    vehicles: boolean;
-    chat: boolean;
-    users: boolean;
-    settings: boolean;
-  };
-}
-
-export interface RolesSettings {
-  roles: RolePermission[];
-}
+// Granular per-module permissions removed (A8).
+// Two fixed roles are defined in src/lib/roles.ts.
 
 // ─── 11. SYSTEM BEHAVIOR ───────────────────────────────────────────────────
 export interface SystemBehaviorSettings {
@@ -150,7 +136,7 @@ export interface FullSystemConfig {
   vehicles: VehicleSettings;
   chat: ChatSettings;
   notifications: NotificationSettings;
-  roles: RolesSettings;
+  // roles removed (A8) — see src/lib/roles.ts for hardcoded role definitions
   system: SystemBehaviorSettings;
 }
 
@@ -188,7 +174,7 @@ export function getDefaultFullConfig(): FullSystemConfig {
       allow_partial_payment: false,
       allow_payment_retry: true,
       failed_payment_behavior: 'keep_record',
-      pending_payment_expiry_minutes: 60,
+      pending_payment_expiry_minutes: 1440, // 24 hours default
       auto_cancel_unpaid_booking: false,
       refund_mode: 'percentage',
       refund_default_percentage: 80,
@@ -197,18 +183,16 @@ export function getDefaultFullConfig(): FullSystemConfig {
       payment_verification_mode: 'manual',
     },
     pricing: {
-      pricing_mode: 'locked',
+      // pricing_mode always 'locked' — removed toggle (A4)
       rounding_rule: 'ceil',
       allow_staff_pricing_override: false,
       allow_admin_pricing_override: true,
-      scheduled_pricing_enabled: false,
-      overlap_resolution: 'priority_based',
     },
     availability: {
       buffer_time_minutes: 30,
       overlap_policy: 'block',
       allow_pending_conflict_hold: true,
-      pending_booking_priority_expiry_minutes: 30,
+      pending_booking_priority_expiry_minutes: 1440, // 24 hours default
     },
     vehicles: {
       car_type_enabled: true,
@@ -223,8 +207,6 @@ export function getDefaultFullConfig(): FullSystemConfig {
     chat: {
       booking_chat_enabled: true,
       support_chat_enabled: true,
-      support_mode: 'ticket_based',
-      support_assignment_mode: 'auto',
       allow_client_chat_edit: false,
       allow_client_chat_delete: false,
       allow_staff_chat_moderation: true,
@@ -241,25 +223,11 @@ export function getDefaultFullConfig(): FullSystemConfig {
       trigger_refund_processed: true,
       urgency_only_flag: false,
     },
-    roles: {
-      roles: [
-        {
-          role_id: 'admin',
-          role_name: 'Admin',
-          permissions: { bookings: true, payments: true, vehicles: true, chat: true, users: true, settings: true },
-        },
-        {
-          role_id: 'staff',
-          role_name: 'Staff',
-          permissions: { bookings: true, payments: true, vehicles: false, chat: true, users: false, settings: false },
-        },
-      ],
-    },
     system: {
       audit_logging_enabled: true,
       log_level: 'full',
       audit_retention_days: 90,
-      chat_retention_policy: '365 days',
+      chat_retention_policy: '90 days',
       maintenance_enabled: false,
       maintenance_allow_admin_bypass: true,
       maintenance_blocks_booking_creation: true,
@@ -310,7 +278,6 @@ export async function fetchFullConfig(): Promise<FullSystemConfig> {
         vehicles: { ...getDefaultFullConfig().vehicles, ...(data.vehicles || {}) },
         chat: { ...getDefaultFullConfig().chat, ...(data.chat || {}) },
         notifications: { ...getDefaultFullConfig().notifications, ...(data.notifications || {}) },
-        roles: { ...getDefaultFullConfig().roles, ...(data.roles || {}) },
         system: { ...getDefaultFullConfig().system, ...(data.system || {}) },
       };
       saveCache(merged);
@@ -340,7 +307,8 @@ export async function saveConfigSection<K extends keyof FullSystemConfig>(
 }
 
 // ─── LEGACY COMPAT (used by other files) ──────────────────────────────────
-export type PricingBehaviorMode = 'locked' | 'recalculated';
+// pricing_mode removed (A4) — price is ALWAYS locked at submission
+export type PricingBehaviorMode = 'locked';
 
 export interface SystemSettings {
   companyName: string; supportEmail: string; supportPhone: string;
@@ -349,7 +317,6 @@ export interface SystemSettings {
   lateFeeMethod: 'hourly_rate' | 'flat_amount' | 'percentage';
   lateFeeHourlyNote: string; lateFeeFlat: number; lateFeePercent: number;
   sessionTimeoutMinutes: number;
-  pricingBehaviorMode: PricingBehaviorMode;
   primaryColor: string; secondaryColor: string; accentColor: string;
   sidebarColor: string; headerColor: string;
 }
@@ -369,7 +336,6 @@ export function getDefaultSettings(): SystemSettings {
     lateFeeFlat: d.system.lateFeeFlat,
     lateFeePercent: d.system.lateFeePercent,
     sessionTimeoutMinutes: d.system.sessionTimeoutMinutes,
-    pricingBehaviorMode: d.pricing.pricing_mode,
     primaryColor: '#10b981', secondaryColor: '#3b82f6',
     accentColor: '#f59e0b', sidebarColor: '#1e293b', headerColor: '#ffffff',
   };
@@ -390,7 +356,6 @@ export async function fetchSettingsFromFirestore(): Promise<SystemSettings> {
     lateFeeFlat: cfg.system.lateFeeFlat,
     lateFeePercent: cfg.system.lateFeePercent,
     sessionTimeoutMinutes: cfg.system.sessionTimeoutMinutes,
-    pricingBehaviorMode: cfg.pricing.pricing_mode,
     primaryColor: '#10b981', secondaryColor: '#3b82f6',
     accentColor: '#f59e0b', sidebarColor: '#1e293b', headerColor: '#ffffff',
   };
@@ -408,14 +373,11 @@ export async function saveSettings(s: SystemSettings): Promise<void> {
   cfg.system.lateFeeFlat = s.lateFeeFlat;
   cfg.system.lateFeePercent = s.lateFeePercent;
   cfg.system.sessionTimeoutMinutes = s.sessionTimeoutMinutes;
-  cfg.pricing.pricing_mode = s.pricingBehaviorMode;
   cfg.booking.min_booking_duration_hours = s.minimumRentalHours;
   await saveFullConfig(cfg);
 }
 
-export function getPricingBehaviorMode(): PricingBehaviorMode {
-  return getFullConfig().pricing.pricing_mode;
-}
-export function shouldStorePriceAtBookingTime(): boolean { return getPricingBehaviorMode() === 'locked'; }
-export function shouldRecalculatePrice(): boolean { return getPricingBehaviorMode() === 'recalculated'; }
+/** Price is always locked at submission (A4 — pricing_mode toggle removed) */
+export function getPricingBehaviorMode(): 'locked' { return 'locked'; }
+export function shouldStorePriceAtBookingTime(): boolean { return true; }
 export function getSessionTimeoutMs(): number { return getFullConfig().system.sessionTimeoutMinutes * 60 * 1000; }

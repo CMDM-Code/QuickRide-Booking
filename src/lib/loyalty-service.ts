@@ -1,75 +1,45 @@
-import { db } from "./firebase";
-import { doc, getDoc, updateDoc, increment, collection, addDoc, serverTimestamp } from "firebase/firestore";
+'use client';
+/**
+ * loyalty-service.ts — Simplified Rewards Summary (A2)
+ *
+ * Replaces the old earn/redeem/transaction ledger with a simple
+ * tier-based summary based on completed trip count.
+ * No point calculations, no redemption flow, no points balance.
+ */
 
-export const POINTS_PER_HOUR = 10;
-export const POINTS_PER_PH_PESO = 0.01; // 1% back in points equivalent
+export type CustomerTier = 'New Member' | 'Regular' | 'Valued Customer';
 
-export async function getUserPoints(userId: string): Promise<number> {
-  if (!db) return 0;
-  try {
-    const userRef = doc(db, 'profiles', userId);
-    const snap = await getDoc(userRef);
-    if (snap.exists()) {
-      return snap.data().loyalty_points || 0;
-    }
-  } catch (error) {
-    console.error("Error fetching loyalty points:", error);
-  }
-  return 0;
+export interface RewardsSummary {
+  tier: CustomerTier;
+  completedTrips: number;
+  message: string;
+  color: string;
 }
 
-export async function addPointsForBooking(userId: string, totalPrice: number, totalHours: number, bookingId: string) {
-  if (!db) return;
-  
-  const pointsFromPrice = Math.floor(totalPrice * POINTS_PER_PH_PESO);
-  const pointsFromDuration = Math.floor(totalHours * POINTS_PER_HOUR);
-  const totalPoints = pointsFromPrice + pointsFromDuration;
-
-  try {
-    const userRef = doc(db, 'profiles', userId);
-    await updateDoc(userRef, {
-      loyalty_points: increment(totalPoints)
-    });
-
-    // Log the transaction
-    await addDoc(collection(db, 'loyalty_transactions'), {
-      user_id: userId,
-      booking_id: bookingId,
-      points: totalPoints,
-      type: 'earned',
-      description: `Points earned from Booking #${bookingId.substring(0, 8)}`,
-      created_at: serverTimestamp()
-    });
-
-    return totalPoints;
-  } catch (error) {
-    console.error("Error adding loyalty points:", error);
+/**
+ * Returns the customer's tier and a friendly message based on trip count.
+ */
+export function getCustomerTier(completedTrips: number): RewardsSummary {
+  if (completedTrips >= 10) {
+    return {
+      tier: 'Valued Customer',
+      completedTrips,
+      message: 'Thank you for choosing QuickRide!',
+      color: 'text-yellow-600',
+    };
   }
-}
-
-export async function usePoints(userId: string, pointsToUse: number, description: string) {
-  if (!db) return false;
-  
-  try {
-    const currentPoints = await getUserPoints(userId);
-    if (currentPoints < pointsToUse) return false;
-
-    const userRef = doc(db, 'profiles', userId);
-    await updateDoc(userRef, {
-      loyalty_points: increment(-pointsToUse)
-    });
-
-    await addDoc(collection(db, 'loyalty_transactions'), {
-      user_id: userId,
-      points: pointsToUse,
-      type: 'used',
-      description: description,
-      created_at: serverTimestamp()
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Error using loyalty points:", error);
-    return false;
+  if (completedTrips >= 3) {
+    return {
+      tier: 'Regular',
+      completedTrips,
+      message: 'Thank you for choosing QuickRide!',
+      color: 'text-blue-600',
+    };
   }
+  return {
+    tier: 'New Member',
+    completedTrips,
+    message: 'Thank you for choosing QuickRide!',
+    color: 'text-green-600',
+  };
 }

@@ -48,9 +48,7 @@ export default function PaymentModal({ requests, grandTotal, onClose, onPay }: P
   const [paid, setPaid] = useState(false);
   const [error, setError] = useState('');
 
-  const serviceFee = Math.round(grandTotal * 0.02);
-  const subtotal = grandTotal;
-  const total = grandTotal + serviceFee;
+  const total = grandTotal;
 
   function formatCard(v: string) {
     return v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
@@ -356,15 +354,7 @@ export default function PaymentModal({ requests, grandTotal, onClose, onPay }: P
 
                   {/* Price breakdown */}
                   <div className="p-5 space-y-3 bg-[var(--bg-secondary)]">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-[var(--text-secondary)] font-medium">Subtotal</span>
-                      <span className="font-bold text-[var(--text-primary)]">{formatCurrency(subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-[var(--text-secondary)] font-medium">Service Fee (2%)</span>
-                      <span className="font-bold text-[var(--text-primary)]">{formatCurrency(serviceFee)}</span>
-                    </div>
-                    <div className="pt-3 border-t border-[var(--border-subtle)] flex justify-between">
+                    <div className="flex justify-between text-sm items-center">
                       <span className="font-black text-[var(--text-primary)]">Total</span>
                       <span className="font-black text-xl text-green-700">{formatCurrency(total)}</span>
                     </div>

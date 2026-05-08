@@ -3,7 +3,8 @@ import { Manrope, Inter } from "next/font/google";
 import "./globals.css";
 import "@/styles/design-tokens.css";
 import { BrandingProvider } from "@/components/providers/BrandingProvider";
-import TawkToWidget from "@/components/layout/TawkToWidget";
+import { MaintenanceProvider } from "@/components/providers/MaintenanceProvider";
+import { SettingsProvider } from "@/components/providers/SettingsProvider";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -33,10 +34,13 @@ export default function RootLayout({
         className={`${manrope.variable} ${inter.variable} antialiased font-sans`}
         suppressHydrationWarning
       >
-        <BrandingProvider>
-          {children}
-          <TawkToWidget />
-        </BrandingProvider>
+        <SettingsProvider>
+          <BrandingProvider>
+            <MaintenanceProvider>
+              {children}
+            </MaintenanceProvider>
+          </BrandingProvider>
+        </SettingsProvider>
       </body>
     </html>
   );

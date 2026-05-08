@@ -2,6 +2,7 @@
 
 import StaffLayout from "../layout";
 import { useEffect, useState } from "react";
+import { getAllBookings, type FirestoreBooking } from "@/lib/booking-service";
 
 interface Customer {
   id: string;
@@ -13,34 +14,48 @@ interface Customer {
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load customer data from storage
-    const bookings = JSON.parse(localStorage.getItem('quickride_bookings') || '[]');
-    
-    // Aggregate customer data from bookings
-    const customerMap = new Map<string, { name: string; email: string; count: number; score: number }>();
-    
-    bookings.forEach((booking: any) => {
-      if (!customerMap.has(booking.customerEmail)) {
-        customerMap.set(booking.customerEmail, {
-          name: booking.customerName,
-          email: booking.customerEmail,
-          count: 0,
-          score: 80 + Math.floor(Math.random() * 20)
+    const loadCustomers = async () => {
+      try {
+        setLoading(true);
+        const bookings = await getAllBookings();
+        
+        // Aggregate customer data from bookings
+        const customerMap = new Map<string, { name: string; email: string; count: number; score: number }>();
+        
+        bookings.forEach((booking: FirestoreBooking) => {
+          const email = booking.profile?.email || 'unknown@example.com';
+          const name = booking.profile?.name || 'Unknown Customer';
+          
+          if (!customerMap.has(email)) {
+            customerMap.set(email, {
+              name,
+              email,
+              count: 0,
+              score: 80 + Math.floor(Math.random() * 20)
+            });
+          }
+          const customer = customerMap.get(email)!;
+          customer.count++;
         });
-      }
-      const customer = customerMap.get(booking.customerEmail)!;
-      customer.count++;
-    });
 
-    setCustomers(Array.from(customerMap.entries()).map(([email, data], index) => ({
-      id: `CUS-${String(index + 1).padStart(3, '0')}`,
-      name: data.name,
-      email: email,
-      totalRentals: data.count,
-      trustScore: data.score
-    })));
+        setCustomers(Array.from(customerMap.entries()).map(([email, data], index) => ({
+          id: `CUS-${String(index + 1).padStart(3, '0')}`,
+          name: data.name,
+          email: email,
+          totalRentals: data.count,
+          trustScore: data.score
+        })));
+      } catch (error) {
+        console.error('Error loading customers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadCustomers();
   }, []);
 
   return (
@@ -52,7 +67,12 @@ export default function CustomersPage() {
         </div>
 
         <div className="card">
-          {customers.length === 0 ? (
+          {loading ? (
+            <div className="py-12 text-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-700 mx-auto mb-4"></div>
+              <p className="text-slate-500 font-medium">Loading customers...</p>
+            </div>
+          ) : customers.length === 0 ? (
             <div className="py-12 text-center">
               <div className="text-5xl mb-4">👤</div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">No Customers Yet</h3>

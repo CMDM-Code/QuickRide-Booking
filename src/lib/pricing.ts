@@ -120,3 +120,30 @@ export function computeRentalTotalStrictBlocks(args: {
   };
 }
 
+/**
+ * Hierarchical pricing lookup system.
+ * Rules:
+ * 1. Start from the selected (most specific / child) location
+ * 2. Check if a price exists for that locationId + carTypeId
+ * 3. If not found, move to its parent location
+ * 4. Repeat until a price is found
+ * 5. If no price exists in the hierarchy, use the default price
+ */
+export function getPrice(
+  locationId: string,
+  carTypeId: string,
+  locationsById: Record<string, Location>,
+  pricingSheets: PricingSheet[],
+  fallbackLocationId: string = "default"
+): ResolvedLocationRate | null {
+  const sheet = pricingSheets.find((s) => s.id === carTypeId);
+  if (!sheet) return null;
+
+  return resolveRatesForLocation(
+    sheet,
+    locationId,
+    locationsById,
+    fallbackLocationId
+  );
+}
+

@@ -359,11 +359,27 @@ export default function BookingForm() {
       return;
     }
 
+    if (!startDate || !startTime || !endDate || !endTime) {
+      setFormError("Please select start and end dates and times.");
+      return;
+    }
+
+    const start = new Date(`${startDate}T${startTime}`);
+    const end = new Date(`${endDate}T${endTime}`);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      setFormError("Invalid date or time selected.");
+      return;
+    }
+
     if (pricingResult?.pricing) setStep('reviewing');
   };
 
   const handleConfirm = async () => {
-    if (!db) return;
+    if (!db) {
+      setFormError("Database connection is unavailable. Please try again later.");
+      setIsSubmitting(false);
+      return;
+    }
     setIsSubmitting(true);
     setFormError(null);
 
@@ -393,6 +409,19 @@ export default function BookingForm() {
         return;
       }
 
+      // Validate dates
+      if (!startDate || !startTime || !endDate || !endTime) {
+        setFormError("Please select start and end dates and times.");
+        return;
+      }
+      
+      const start = new Date(`${startDate}T${startTime}`);
+      const end = new Date(`${endDate}T${endTime}`);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        setFormError("Invalid date or time selected.");
+        return;
+      }
+
       const pricingMode = getPricingBehaviorMode();
       const priceBreakdown = shouldStorePriceAtBookingTime() ? {
         baseTotal: pricing.totalPrice - pricing.driverFee,
@@ -415,8 +444,8 @@ export default function BookingForm() {
       const bookingDoc = await addDoc(collection(db, 'bookings'), {
         user_id: user.id,
         car_id: selectedVehicleId,
-        start_date: Timestamp.fromDate(new Date(`${startDate}T${startTime}`)),
-        end_date: Timestamp.fromDate(new Date(`${endDate}T${endTime}`)),
+        start_date: Timestamp.fromDate(start),
+        end_date: Timestamp.fromDate(end),
         total_price: pricing.totalPrice,
         price_mode: pricingMode,
         price_breakdown: priceBreakdown,
@@ -429,18 +458,22 @@ export default function BookingForm() {
         created_at: serverTimestamp()
       });
 
-      // Notify Admins and Staff
-      const profilesSnap = await getDocs(query(collection(db, 'profiles'), where('role', 'in', ['admin', 'staff'])));
-      const notifyPromises = profilesSnap.docs.map(profileDoc => 
-        createNotification({
-          user_id: profileDoc.id,
-          type: 'booking_status',
-          title: 'New Booking Request',
-          message: `${user.name} has requested a booking for ${selectedVehicle?.name}.`,
-          data: { booking_id: bookingDoc.id }
-        })
-      );
-      await Promise.all(notifyPromises);
+      // Notify Admins and Staff — best-effort, don't block success
+      try {
+        const profilesSnap = await getDocs(query(collection(db, 'profiles'), where('role', 'in', ['admin', 'staff'])));
+        const notifyPromises = profilesSnap.docs.map(profileDoc => 
+          createNotification({
+            user_id: profileDoc.id,
+            type: 'booking_status',
+            title: 'New Booking Request',
+            message: `${user.name} has requested a booking for ${selectedVehicle?.name}.`,
+            data: { booking_id: bookingDoc.id }
+          })
+        );
+        await Promise.all(notifyPromises);
+      } catch (notifyErr) {
+        console.error("Admin notification failed:", notifyErr);
+      }
 
       setStep('selecting');
       window.location.href = "/dashboard/bookings";

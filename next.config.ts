@@ -11,18 +11,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'images.unsplash.com',
-        pathname: '/**',
+        hostname: '**',
       },
       {
-        protocol: 'https',
-        hostname: 'assets.kiloapps.io',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'toyota.com.ph',
-        pathname: '/**',
+        protocol: 'http',
+        hostname: '**',
       },
     ],
   },

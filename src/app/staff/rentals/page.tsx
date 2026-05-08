@@ -2,7 +2,8 @@
 
 import StaffLayout from "../layout";
 import { useEffect, useState } from "react";
-import { staffStore, Booking, Vehicle } from "@/lib/staff-store";
+import { getAllBookings, updateBookingStatus, type FirestoreBooking } from "@/lib/booking-service";
+import { getAllVehicles, type Vehicle } from "@/lib/vehicle-service";
 
 const calculateDueIn = (returnDate: string) => {
   const now = new Date();
@@ -24,21 +25,43 @@ const calculateDueIn = (returnDate: string) => {
 };
 
 export default function ActiveRentalsPage() {
-  const [activeBookings, setActiveBookings] = useState<(Booking & { vehicle?: Vehicle })[]>([]);
+  const [activeBookings, setActiveBookings] = useState<(FirestoreBooking & { vehicle?: Vehicle })[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const bookings = staffStore.getBookings().filter(b => b.status === 'active');
-    const vehicles = staffStore.getVehicles();
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const bookings = await getAllBookings();
+        const vehicles = await getAllVehicles();
+        
+        const active = bookings.filter(b => b.status === 'active');
+        setActiveBookings(active.map(b => ({
+          ...b,
+          vehicle: vehicles.find(v => v.id === b.assigned_vehicle_id)
+        })));
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    setActiveBookings(bookings.map(b => ({
-      ...b,
-      vehicle: vehicles.find(v => v.id === b.vehicleId)
-    })));
+    loadData();
   }, []);
 
-  const handleProcessReturn = (id: string) => {
-    staffStore.updateBookingStatus(id, 'completed');
-    setActiveBookings(prev => prev.filter(b => b.id !== id));
+  const handleProcessReturn = async (id: string) => {
+    try {
+      await updateBookingStatus(id, 'completed', {
+        at: new Date().toISOString(),
+        by: 'staff',
+        action: 'completed',
+        detail: 'Vehicle returned'
+      });
+      setActiveBookings(prev => prev.filter(b => b.id !== id));
+    } catch (error) {
+      console.error('Error processing return:', error);
+    }
   };
 
   return (
@@ -58,7 +81,7 @@ export default function ActiveRentalsPage() {
         ) : (
           <div className="space-y-4">
             {activeBookings.map((rental) => {
-              const dueIn = calculateDueIn(rental.returnDate);
+              const dueIn = calculateDueIn(rental.end_date);
               const isOverdue = dueIn.startsWith('Overdue');
               
               return (
@@ -66,14 +89,14 @@ export default function ActiveRentalsPage() {
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                       <div className="flex items-center space-x-3">
-                        <h3 className="font-bold text-lg text-slate-900">{rental.vehicleName}</h3>
+                        <h3 className="font-bold text-lg text-slate-900">{rental.vehicle?.name || 'Vehicle'}</h3>
                         <span className={`badge ${isOverdue ? 'bg-red-100 text-red-800' : 'badge-success'}`}>
                           {isOverdue ? 'overdue' : 'on-time'}
                         </span>
                       </div>
-                      <p className="text-slate-600 mt-1">{rental.customerName}</p>
+                      <p className="text-slate-600 mt-1">{rental.profile?.name || 'Customer'}</p>
                       <p className="text-slate-500 text-sm mt-1">
-                        Plate: {rental.vehicle?.plate || 'N/A'} • {rental.id}
+                        Plate: {rental.vehicle?.licensePlate || 'N/A'} • {rental.id}
                       </p>
                       <p className={`font-medium mt-2 ${isOverdue ? 'text-red-600' : 'text-amber-600'}`}>
                         Due: {dueIn}
