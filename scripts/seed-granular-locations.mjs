@@ -29,7 +29,7 @@ const LOCATION_DATA = {
   'Region XII (SOCCSKSARGEN)': {
     'South Cotabato': ['General Santos City', 'Koronadal City', 'Surallah', 'Tboli', 'Banga'],
     'Sarangani': ['Alabel', 'Malapatan', 'Glan', 'Maasim', 'Malungon'],
-    'North Cotabato': ['Kidapawan City', 'Mlang', 'Kabacan', 'Matalam', 'Pigcawayan'],
+    'Cotabato': ['Kidapawan City', 'Mlang', 'Kabacan', 'Matalam', 'Pigcawayan'],
     'Sultan Kudarat': ['Tacurong City', 'Isulan', 'Lebak', 'Kalamansig', 'Palimbang'],
   },
   'Region X (Northern Mindanao)': {
@@ -38,6 +38,28 @@ const LOCATION_DATA = {
     'Misamis Occidental': ['Oroquieta City', 'Ozamiz City', 'Tangub City', 'Jimenez'],
     'Lanao del Norte': ['Iligan City', 'Bacolod', 'Kapatagan', 'Kolambugan'],
     'Camiguin': ['Mambajao', 'Sagay', 'Catarman', 'Guinsiliban'],
+  },
+  'Region IX (Zamboanga Peninsula)': {
+    'Zamboanga del Norte': ['Dipolog City', 'Dapitan City', 'Siocon', 'Sindangan', 'Jose Dalman'],
+    'Zamboanga del Sur': ['Pagadian City', 'Aurora', 'Bayog', 'Dimataling', 'Dumingag'],
+    'Zamboanga Sibugay': ['Ipil', 'Buug', 'Diplahan', 'Malangas', 'Payao'],
+    'Zamboanga City': ['Zamboanga City'],
+    'Isabela City': ['Isabela City'],
+  },
+  'Region XIII (CARAGA)': {
+    'Agusan del Norte': ['Butuan City', 'Cabadbaran City', 'Nasipit', 'Carmen', 'Buenavista'],
+    'Agusan del Sur': ['Prosperidad', 'Bayugan City', 'San Francisco', 'Trento', 'Veruela'],
+    'Surigao del Norte': ['Surigao City', 'Siargao Islands', 'Claver', 'Placer', 'Bacuag'],
+    'Surigao del Sur': ['Tandag City', 'Bislig City', 'Cantilan', 'Lanuza', 'Cagwait'],
+    'Dinagat Islands': ['San Jose', 'Dinagat', 'Libjo', 'Cagdianao', 'Tubajon'],
+  },
+  'BARMM (Bangsamoro)': {
+    'Basilan': ['Lamitan City', 'Tipo-Tipo', 'Sumisip', 'Lantawan', 'Tabuan-Lasa'],
+    'Lanao del Sur': ['Marawi City', 'Malabang', 'Balindong', 'Bubong', 'Tugaya'],
+    'Maguindanao del Norte': ['Datu Odin Sinsuat', 'Sultan Kudarat', 'Parang', 'Barira', 'Buldon'],
+    'Maguindanao del Sur': ['Buluan', 'Sultan sa Barongis', 'Shariff Aguak', 'Ampatuan', 'Mamasapano'],
+    'Tawi-Tawi': ['Bongao', 'Sanga-Sanga', 'Sitangkai', 'Simunul', 'Tandubas'],
+    'Cotabato City': ['Cotabato City'],
   },
 };
 

@@ -57,16 +57,16 @@ function BookingProgress({ status }: { status: string }) {
       {STEPS.map((s, i) => (
         <React.Fragment key={s}>
           <div className={`flex items-center justify-center w-5 h-5 rounded-full text-[8px] font-black transition-all ${
-            i < idx ? 'bg-green-500 text-white' :
-            i === idx ? 'bg-slate-900 text-white scale-110 ring-2 ring-slate-900/20' :
-            'bg-slate-100 text-slate-300'
+            i < idx ? 'bg-green-500 text-white dark:bg-green-600' :
+            i === idx ? 'bg-slate-900 text-white dark:bg-green-500 dark:text-white scale-110 ring-2 ring-slate-900/20 dark:ring-green-400' :
+            'bg-slate-100 text-slate-300 dark:bg-slate-700 dark:text-slate-400'
           }`}>{i + 1}</div>
           {i < STEPS.length - 1 && (
-            <div className={`flex-1 h-0.5 rounded-full transition-all ${i < idx ? 'bg-green-400' : 'bg-slate-100'}`} />
+            <div className={`flex-1 h-0.5 rounded-full transition-all ${i < idx ? 'bg-green-400 dark:bg-green-500' : 'bg-slate-200 dark:bg-slate-600'}`} />
           )}
         </React.Fragment>
       ))}
-      <span className="ml-2 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+      <span className="ml-2 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap">
         {STEP_LABELS[status] || status}
       </span>
     </div>

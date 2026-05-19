@@ -6,6 +6,11 @@ import {
   X, CreditCard, Check, Lock, ChevronRight,
   AlertCircle, Smartphone, ShieldCheck,
 } from 'lucide-react';
+import {
+  createXenditCardPayment,
+  createXenditInvoice,
+  type XenditPaymentResponse,
+} from '@/lib/xendit-service';
 
 interface BookingRequest {
   id: string;
@@ -68,8 +73,56 @@ export default function PaymentModal({ requests, grandTotal, onClose, onPay }: P
     }
     setPaying(true);
     try {
-      await onPay();
-      setPaid(true);
+      // Use Xendit for payment processing
+      const externalId = `booking-${Date.now()}`;
+      const customerEmail = 'customer@quickride.com'; // Replace with actual customer email
+      
+      if (method === 'card') {
+        const cardPayment = await createXenditCardPayment({
+          amount: total,
+          currency: 'PHP',
+          payment_method: 'CARD',
+          card_details: {
+            card_number: cardNumber.replace(/\s/g, ''),
+            card_expiry: expiry,
+            card_cvn: cvc,
+            cardholder_name: name,
+          },
+          customer_details: {
+            given_names: name.split(' ')[0],
+            surname: name.split(' ').slice(1).join(' ') || '',
+            email: customerEmail,
+            phone: '',
+          },
+          metadata: {
+            booking_ids: requests.map(r => r.id),
+          },
+        });
+
+        if (cardPayment.status === 'SUCCEEDED') {
+          await onPay();
+          setPaid(true);
+        } else if (cardPayment.status === 'REQUIRES_ACTION' && cardPayment.actions?.url) {
+          // Redirect to 3DS authentication
+          window.location.href = cardPayment.actions.url;
+        } else {
+          throw new Error(cardPayment.error || 'Payment failed. Please try again.');
+        }
+      } else {
+        // For other payment methods, create an invoice
+        const invoice = await createXenditInvoice(
+          total,
+          `QuickRide Booking - ${requests.length} vehicle(s)`,
+          customerEmail,
+          externalId
+        );
+
+        if (invoice.actions?.url) {
+          window.location.href = invoice.actions.url;
+        } else {
+          throw new Error('Failed to create payment invoice.');
+        }
+      }
     } catch (e: any) {
       setError(e?.message || 'Payment failed. Please try again.');
     } finally {
@@ -168,7 +221,7 @@ export default function PaymentModal({ requests, grandTotal, onClose, onPay }: P
                         onClick={() => setMethod(m.id)}
                         className={`flex items-center gap-2.5 p-3.5 rounded-xl border-2 transition-all text-sm font-bold ${
                           method === m.id
-                            ? 'border-green-600 bg-green-50/60 text-green-700'
+                            ? 'border-green-500 bg-green-500/10 text-green-600 dark:border-green-400 dark:bg-green-400/10 dark:text-green-400'
                             : 'border-[var(--border-default)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
                         }`}
                       >

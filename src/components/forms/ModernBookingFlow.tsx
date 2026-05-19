@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   X, ChevronRight, ChevronLeft, MapPin, Calendar, Clock,
   Plus, Trash2, ArrowRight, Check, Car, Edit3, Users,
@@ -1219,6 +1220,7 @@ interface BookingFlowProps {
 }
 
 export default function ModernBookingFlow({ onClose, editMode, existingBooking, onEditComplete }: BookingFlowProps) {
+  const router = useRouter();
   const { settings: config } = useSettings();
   const [stage, setStage] = useState<Stage>('car');
   const [showLocationPicker, setShowLocationPicker] = useState(false);
@@ -1472,6 +1474,7 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
          });
          
          setShowSuccess(true);
+         router.refresh();
       } else {
         if (bookingRequests.length === 0) {
           alert("No booking requests to submit.");
@@ -1593,6 +1596,7 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
           'Booking submission timed out. Please try again.'
         );
         setShowSuccess(true);
+        router.refresh();
       }
     } catch (error: any) {
       console.error("Error creating bookings:", error);

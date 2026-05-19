@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -12,16 +13,21 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { format } from "date-fns";
 import { withTimeout } from "@/lib/api-utils";
-import { CreditCard, QrCode, ShieldCheck, X, CheckCircle2 } from "lucide-react";
+import { CreditCard, QrCode, ShieldCheck, X, CheckCircle2, Loader2 } from "lucide-react";
 import { updateDoc, doc } from "firebase/firestore";
+import { createXenditQRPayment, getXenditPaymentStatus } from "@/lib/xendit-service";
 
 export default function PaymentsPage() {
+  const router = useRouter();
   const [pendingBookings, setPendingBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [refNumber, setRefNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [xenditPaymentId, setXenditPaymentId] = useState<string>('');
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
 
   useEffect(() => {
     fetchPendingPayments();
@@ -81,6 +87,7 @@ export default function PaymentsPage() {
       });
       
       setShowSuccess(true);
+      router.refresh();
       setTimeout(() => {
         setShowSuccess(false);
         setSelectedBooking(null);
@@ -93,6 +100,75 @@ export default function PaymentsPage() {
       setIsSubmitting(false);
     }
   };
+
+  const handleGenerateQR = async () => {
+    if (!selectedBooking) return;
+    
+    setIsGeneratingQR(true);
+    try {
+      const user = authClient.getCurrentUser();
+      const externalId = `booking-${selectedBooking.id}-${Date.now()}`;
+      
+      const qrPayment = await createXenditQRPayment(
+        selectedBooking.total_price,
+        externalId,
+        user?.email || 'customer@quickride.com'
+      );
+      
+      if (qrPayment.actions?.url) {
+        setQrCodeUrl(qrPayment.actions.url);
+        setXenditPaymentId(qrPayment.id);
+      } else {
+        throw new Error('Failed to generate QR code');
+      }
+    } catch (err) {
+      console.error('QR generation error:', err);
+      alert('Failed to generate QR code. Please try again.');
+    } finally {
+      setIsGeneratingQR(false);
+    }
+  };
+
+  const handleCheckPaymentStatus = async () => {
+    if (!xenditPaymentId) return;
+    
+    setIsSubmitting(true);
+    try {
+      const status = await getXenditPaymentStatus(xenditPaymentId);
+      
+      if (status.status === 'SUCCEEDED' && selectedBooking && db) {
+        const ref = doc(db, 'bookings', selectedBooking.id);
+        await updateDoc(ref, {
+          status: 'paid',
+          payment_ref: xenditPaymentId,
+          paid_at: new Date().toISOString()
+        });
+        
+        setShowSuccess(true);
+        router.refresh();
+        setTimeout(() => {
+          setShowSuccess(false);
+          setSelectedBooking(null);
+          setQrCodeUrl('');
+          setXenditPaymentId('');
+          fetchPendingPayments();
+        }, 2000);
+      } else {
+        alert('Payment not yet completed. Please scan the QR code and complete the payment.');
+      }
+    } catch (err) {
+      console.error('Status check error:', err);
+      alert('Failed to check payment status. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedBooking) {
+      handleGenerateQR();
+    }
+  }, [selectedBooking]);
 
   return (
     <div className="space-y-10">
@@ -210,39 +286,58 @@ export default function PaymentsPage() {
                   </button>
                 </div>
 
-                <form onSubmit={handlePaymentSubmit} className="p-8 space-y-8">
-                  <div className="flex flex-col items-center gap-4 py-4 bg-green-50/50 rounded-3xl border border-green-100 border-dashed">
-                     <QrCode size={120} className="text-slate-900" />
-                     <div className="text-center">
-                        <p className="text-[10px] font-black text-green-700 uppercase tracking-[0.2em]">Scan to Pay via GCash</p>
-                        <p className="text-sm font-bold text-slate-900 mt-1">QuickRide GenSan Branch</p>
-                     </div>
+                <form onSubmit={(e) => { e.preventDefault(); handleCheckPaymentStatus(); }} className="p-8 space-y-8">
+                  <div className="flex flex-col items-center gap-4 py-6 bg-green-50/50 dark:bg-green-900/20 rounded-3xl border border-green-100 dark:border-green-800 border-dashed">
+                     {isGeneratingQR ? (
+                       <div className="flex flex-col items-center gap-3">
+                         <Loader2 size={120} className="text-green-600 dark:text-green-400 animate-spin" />
+                         <p className="text-sm font-bold text-slate-600 dark:text-slate-300">Generating QR Code...</p>
+                       </div>
+                     ) : qrCodeUrl ? (
+                       <div className="flex flex-col items-center gap-4">
+                         <div className="bg-white p-4 rounded-2xl shadow-lg">
+                           <img 
+                             src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCodeUrl)}`}
+                             alt="Xendit QR Code"
+                             className="w-40 h-40"
+                           />
+                         </div>
+                         <div className="text-center">
+                            <p className="text-[10px] font-black text-green-700 dark:text-green-400 uppercase tracking-[0.2em]">Scan to Pay via Xendit</p>
+                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-1">QuickRide GenSan Branch</p>
+                         </div>
+                       </div>
+                     ) : (
+                       <div className="flex flex-col items-center gap-3">
+                         <QrCode size={120} className="text-slate-400" />
+                         <p className="text-sm font-bold text-slate-500 dark:text-slate-400">QR Code not available</p>
+                       </div>
+                     )}
                   </div>
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between px-2">
-                       <span className="text-sm font-bold text-slate-500">Total Amount Due</span>
-                       <span className="text-2xl font-black text-green-700">₱{selectedBooking.total_price.toLocaleString()}</span>
+                       <span className="text-sm font-bold text-slate-500 dark:text-slate-400">Total Amount Due</span>
+                       <span className="text-2xl font-black text-green-700 dark:text-green-400">₱{selectedBooking.total_price.toLocaleString()}</span>
                     </div>
 
-                    <div className="relative">
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">GCash Reference Number</label>
-                      <input 
-                        required
-                        value={refNumber}
-                        onChange={(e) => setRefNumber(e.target.value)}
-                        placeholder="e.g. 0012 345 678901"
-                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-mono font-bold text-lg focus:ring-4 focus:ring-green-500/10 focus:border-green-600 outline-none transition-all"
-                      />
-                    </div>
+                    {qrCodeUrl && (
+                      <button
+                        onClick={() => window.open(qrCodeUrl, '_blank')}
+                        className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                      >
+                        <QrCode size={16} />
+                        Open in Xendit App
+                      </button>
+                    )}
                   </div>
 
                   <button 
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !qrCodeUrl}
                     type="submit"
-                    className="w-full py-5 bg-green-700 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-green-700/20 hover:bg-green-800 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-5 bg-green-700 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-green-700/20 hover:bg-green-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isSubmitting ? "Verifying..." : "Submit Payment Proof"}
+                    {isSubmitting ? "Checking Status..." : "Check Payment Status"}
                     {!isSubmitting && <ShieldCheck size={16} />}
                   </button>
                 </form>
