@@ -40,6 +40,7 @@ export default function ResetPasswordPage() {
               src="https://www.mitsubishi-motors.com.ph/uploads/vehicle/photos/1672802572_mirage-g4-exterior-01.png"
               alt="Mitsubishi Mirage G4"
               fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-contain p-12"
             />
           </div>

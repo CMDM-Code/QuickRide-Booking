@@ -10,6 +10,7 @@ import {
 } from "@/lib/notification-service";
 import { Notification } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
+import { toSafeDate } from "@/lib/api-utils";
 import { Bell, Calendar, MessageSquare, Tag, Info, Trash2, CheckCircle } from "lucide-react";
 
 export default function NotificationsPage() {
@@ -95,7 +96,10 @@ export default function NotificationsPage() {
                     <p className="text-sm text-slate-500 mt-1 leading-relaxed">{n.message}</p>
                   </div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap mt-1">
-                    {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                    {(() => {
+                      const d = toSafeDate(n.created_at);
+                      return d ? formatDistanceToNow(d, { addSuffix: true }) : 'just now';
+                    })()}
                   </span>
                 </div>
 

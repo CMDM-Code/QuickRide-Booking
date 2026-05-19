@@ -78,6 +78,7 @@ export default function LoginPage() {
               src="https://toyota.com.ph/storage/vehicles/galleries/213/conversions/01-normal.jpg"
               alt="Toyota Vios XLE 2024"
               fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-contain p-12"
             />
           </div>

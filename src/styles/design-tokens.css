@@ -87,13 +87,14 @@
   --border-focus: var(--color-primary-500);
   
   /* ========================================
-     SHADOW TOKENS (Subtle Depth)
+     SHADOW TOKENS (Premium Depth)
      ======================================== */
   --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.03);
   --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.05), 0 4px 6px -4px rgba(15, 23, 42, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.08);
+  --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+  --shadow-premium: 0 15px 30px -5px rgba(15, 23, 42, 0.12), 0 10px 15px -5px rgba(15, 23, 42, 0.08);
   --shadow-inner: inset 0 2px 4px 0 rgba(15, 23, 42, 0.03);
   
   /* ========================================
@@ -116,8 +117,9 @@
   /* ========================================
      TYPOGRAPHY TOKENS
      ======================================== */
-  --font-display: var(--font-manrope), 'Manrope', system-ui, sans-serif;
+  --font-display: var(--font-inter), 'Inter', system-ui, sans-serif;
   --font-body: var(--font-inter), 'Inter', system-ui, sans-serif;
+  --font-dm-sans: var(--font-inter), 'Inter', sans-serif;
   --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
   
   /* Font Sizes */
@@ -171,6 +173,7 @@
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
   
   /* ========================================
      Z-INDEX TOKENS
@@ -206,7 +209,22 @@
      DETAIL SIGNATURE (120% Element)
      ======================================== */
   --signature-gradient: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-800) 100%);
-  --signature-glow: 0 0 40px rgba(21, 128, 61, 0.15);
+  --signature-glow: 0 0 40px rgba(21, 128, 61, 0.15), 0 0 80px rgba(21, 128, 61, 0.05);
+  --signature-glow-hover: 0 0 60px rgba(21, 128, 61, 0.25), 0 0 100px rgba(21, 128, 61, 0.1);
+  
+  /* Glassmorphism Tokens */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-blur: 16px;
+
+  /* Frosted Foundation (Option 2) */
+  --frost-bg: rgba(255, 255, 255, 0.8);
+  --frost-blur: 12px;
+  --frost-border: rgba(255, 255, 255, 0.3);
+
+  /* Button Background */
+  --bg-button: rgba(255, 255, 255, 0.1);
+
 }
 
 /* Dark Mode Overrides */
@@ -232,6 +250,17 @@
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
 
     --header-bg: var(--color-ink-800);
+
+    /* Glassmorphism tokens for dark mode */
+    --glass-bg: rgba(15, 23, 42, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+
+    /* Frosted tokens for dark mode */
+    --frost-bg: rgba(30, 41, 59, 0.6);
+    --frost-border: rgba(255, 255, 255, 0.08);
+
+    /* Button background for dark mode */
+    --bg-button: rgba(255, 255, 255, 0.05);
 
     /* Semantic colors for dark mode - darker backgrounds with same text colors */
     --color-success: #4ade80;
@@ -267,6 +296,17 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
 
   --header-bg: var(--color-ink-800);
+
+  /* Glassmorphism tokens for dark mode */
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+
+  /* Frosted tokens for dark mode */
+  --frost-bg: rgba(30, 41, 59, 0.6);
+  --frost-border: rgba(255, 255, 255, 0.08);
+
+  /* Button background for dark mode */
+  --bg-button: rgba(255, 255, 255, 0.05);
 
   /* Semantic colors for dark mode */
   --color-success: #4ade80;

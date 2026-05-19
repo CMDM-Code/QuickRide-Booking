@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getFullConfig } from '@/lib/settings-service';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { X, DollarSign, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 interface PriceOverrideModalProps {
@@ -27,7 +27,7 @@ export default function PriceOverrideModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const config = getFullConfig();
+  const { settings: config } = useSettings();
   const canOverride =
     config.pricing.allow_admin_pricing_override ||
     config.pricing.allow_staff_pricing_override;

@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
-import { Manrope, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
+import "leaflet/dist/leaflet.css";
 import "./globals.css";
 import "@/styles/design-tokens.css";
 import { BrandingProvider } from "@/components/providers/BrandingProvider";
 import { MaintenanceProvider } from "@/components/providers/MaintenanceProvider";
 import { SettingsProvider } from "@/components/providers/SettingsProvider";
 
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 const inter = Inter({
   variable: "--font-inter",
@@ -29,9 +25,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body
-        className={`${manrope.variable} ${inter.variable} antialiased font-sans`}
+        className={`${inter.variable} antialiased font-sans noise-bg`}
         suppressHydrationWarning
       >
         <SettingsProvider>

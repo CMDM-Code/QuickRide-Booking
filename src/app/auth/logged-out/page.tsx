@@ -50,6 +50,7 @@ export default function LoggedOutPage() {
               src="https://www.suzuki.com.ph/uploads/vehicles/galleries/6439977883f2d_ertiga-hybrid-exterior-01.png"
               alt="Suzuki Ertiga Hybrid"
               fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-contain p-12"
             />
           </div>

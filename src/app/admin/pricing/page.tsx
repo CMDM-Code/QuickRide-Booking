@@ -17,7 +17,7 @@ import { adminStore } from "@/lib/admin-store";
 import { withTimeout } from "@/lib/api-utils";
 import { FilterDropdown, FilterConfig, ActiveFilters } from "@/components/ui/FilterDropdown";
 import { LocationTree } from "@/components/ui/LocationTree";
-import { Zap, ArrowUp, Info } from "lucide-react";
+import { Zap, ArrowUp, Info, X, Save } from "lucide-react";
 import Link from "next/link";
 
 type CarTypeRow = { id: string; name: string };
@@ -38,17 +38,23 @@ export default function PricingManagementPage() {
   const [mode, setMode] = useState<'cloud' | 'local'>('cloud');
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [selectedLocId, setSelectedLocId] = useState<string | null>(null);
+  // Drawer open state
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Open drawer when a location is selected
+  useEffect(() => {
+    if (selectedLocId) setDrawerOpen(true);
+  }, [selectedLocId]);
 
   async function fetchData() {
     setLoading(true);
     
     if (db) {
       try {
-        // Increase timeout to 15s and handle individual failures if needed
         const [locsSnap, sheetsSnap, levelsSnap, typesSnap] = await Promise.all([
           getDocs(collection(db, 'locations')),
           getDocs(collection(db, 'pricing_sheets')),
@@ -60,16 +66,13 @@ export default function PricingManagementPage() {
         const sheets = sheetsSnap.docs.map(d => ({ id: d.id, ...d.data() } as PricingSheet));
         const levs = levelsSnap.docs.map(d => ({ id: d.id, ...d.data() } as LocationLevel));
         
-        // Canonical list of car types: from car_types collection OR pricing_sheets IDs
         let types = typesSnap.docs.map(d => ({ id: d.id, name: d.data().name || titleFromId(d.id) } as CarTypeRow));
         
         if (types.length === 0) {
-          // Fallback to pricing sheets IDs if car_types is empty
           types = sheets.map(s => ({ id: s.id, name: titleFromId(s.id) }));
         }
 
         if (types.length === 0) {
-          // Final seed fallback to ensure the UI is functional
           types = [
             { id: 'economy', name: 'Economy' },
             { id: 'luxury', name: 'Luxury' },
@@ -78,7 +81,6 @@ export default function PricingManagementPage() {
           ];
         }
 
-        // De-duplicate just in case
         const seen = new Set<string>();
         types = types.filter(t => {
           if (seen.has(t.id)) return false;
@@ -220,8 +222,11 @@ export default function PricingManagementPage() {
     );
   }
 
+  const selectedLocName = selectedLocId ? locationsById[selectedLocId]?.name : null;
+
   return (
-    <div className="flex flex-col gap-6 min-h-[calc(100vh-140px)] h-auto">
+    <div className="flex flex-col gap-6" style={{ height: 'calc(100vh - 140px)' }}>
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
         <div>
           <div className="flex items-center gap-3">
@@ -230,7 +235,7 @@ export default function PricingManagementPage() {
                Hierarchical Active
              </span>
           </div>
-          <p className="text-slate-600">Set direct rates or inherit from parent locations.</p>
+          <p className="text-slate-600">Select a location to edit its rates.</p>
         </div>
         <div className="flex gap-2">
           <button onClick={fetchData} className="p-3 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-colors">🔄</button>
@@ -244,144 +249,177 @@ export default function PricingManagementPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-6">
-        <div className="md:col-span-4 flex flex-col gap-4 min-h-0 bg-white rounded-3xl-plus border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-200 shrink-0 bg-slate-900">
-             <h2 className="text-xs font-black text-white uppercase tracking-widest mb-1">Select Context</h2>
-             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter">Editing rates for the selected branch</p>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
-            <LocationTree
-              nodes={treeNodes}
-              byId={treeById}
-              children={tree.children}
-              roots={tree.roots}
-              selectedId={selectedLocId}
-              onSelect={setSelectedLocId}
-              onAddChild={() => {}}
-              onEdit={() => {}}
-              onChangeParent={() => {}}
-            />
-          </div>
+      {/* Location Tree — full width with own scrollbar */}
+      <div className="flex-1 min-h-0 flex flex-col bg-white rounded-3xl-plus border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-200 shrink-0 bg-slate-900">
+          <h2 className="text-xs font-black text-white uppercase tracking-widest mb-1">Select Location Context</h2>
+          <p className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter">
+            Click any location to open its rate editor
+            {selectedLocId && (
+              <span className="ml-2 text-green-400">— currently: {selectedLocName}</span>
+            )}
+          </p>
         </div>
-
-        <div className="md:col-span-8 flex flex-col min-h-0 bg-white rounded-3xl-plus border border-slate-200 shadow-sm overflow-hidden">
-          {selectedLocId ? (
-            <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-4 duration-500">
-              <div className="p-6 border-b border-slate-200 flex items-center justify-between shrink-0 bg-slate-900">
-                <div>
-                  <h2 className="text-xl font-black text-white">
-                    {locationsById[selectedLocId]?.name} 
-                    {selectedLocId === 'default' && <span className="ml-2 text-xs text-amber-400 bg-amber-950 px-2 py-0.5 rounded-lg border border-amber-700 uppercase tracking-widest">Global Default</span>}
-                  </h2>
-                  <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-0.5">Rates for all vehicle categories</p>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-0 custom-scrollbar">
-                <table className="w-full border-collapse">
-                  <thead className="sticky top-0 bg-white z-10 shadow-sm">
-                    <tr className="border-b border-slate-100">
-                      <th className="px-4 py-3 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Vehicle Class</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Hourly</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">12 Hours</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">24 Hours</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {carTypes.map(type => {
-                      const rate = pricingMatrix[type.id]?.[selectedLocId] || { hourly: null, "12h": null, "24h": null };
-                      const inheritance = getInheritedRates(type.id, selectedLocId);
-                      const isInherited = !!inheritance;
-
-                      return (
-                        <tr key={type.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-4 py-3">
-                            <div className="flex flex-col">
-                              <span className="font-black text-slate-900 text-sm tracking-tight">{type.name}</span>
-                              {isInherited ? (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <ArrowUp size={10} className="text-blue-500" />
-                                  <span className="text-[9px] font-bold text-blue-600 uppercase">Inherited from {inheritance.from}</span>
-                                </div>
-                              ) : selectedLocId !== 'default' ? (
-                                <span className="text-[9px] font-bold text-green-600 uppercase tracking-widest mt-1">Direct Rate</span>
-                              ) : null}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <input
-                              type="number"
-                              value={rate.hourly ?? ''}
-                              placeholder={isInherited ? String(inheritance.rates.hourly || '0') : '0'}
-                              onChange={(e) => handleRateChange(type.id, selectedLocId, 'hourly', e.target.value)}
-                              className={`w-24 px-3 py-2 rounded-xl border text-sm font-bold transition-all outline-none ${
-                                isInherited 
-                                  ? 'bg-slate-50 border-slate-100 text-slate-400 placeholder:text-slate-400' 
-                                  : 'bg-white border-slate-200 text-slate-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10'
-                              }`}
-                            />
-                          </td>
-                          <td className="px-4 py-3">
-                            <input
-                              type="number"
-                              value={rate["12h"] ?? ''}
-                              placeholder={isInherited ? String(inheritance.rates["12h"] || '0') : '0'}
-                              onChange={(e) => handleRateChange(type.id, selectedLocId, '12h', e.target.value)}
-                              className={`w-24 px-3 py-2 rounded-xl border text-sm font-bold transition-all outline-none ${
-                                isInherited 
-                                  ? 'bg-slate-50 border-slate-100 text-slate-400 placeholder:text-slate-400' 
-                                  : 'bg-white border-slate-200 text-slate-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10'
-                              }`}
-                            />
-                          </td>
-                          <td className="px-4 py-3">
-                            <input
-                              type="number"
-                              value={rate["24h"] ?? ''}
-                              placeholder={isInherited ? String(inheritance.rates["24h"] || '0') : '0'}
-                              onChange={(e) => handleRateChange(type.id, selectedLocId, '24h', e.target.value)}
-                              className={`w-24 px-3 py-2 rounded-xl border text-sm font-bold transition-all outline-none ${
-                                isInherited 
-                                  ? 'bg-slate-50 border-slate-100 text-slate-400 placeholder:text-slate-400' 
-                                  : 'bg-white border-slate-200 text-slate-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10'
-                              }`}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="p-6 bg-slate-900 text-white shrink-0">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center shrink-0">
-                    <Info size={20} className="text-green-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black uppercase tracking-widest text-white mb-1">Inheritance System</h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      To revert to an inherited rate, simply clear the input field. The system will automatically walk up the parent chain to find the next available rate, eventually falling back to the Global Default.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-               <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 border border-slate-100">
-                 <span className="text-4xl text-slate-300">💰</span>
-               </div>
-               <h3 className="text-xl font-black text-slate-900 mb-2">Select a Context</h3>
-               <p className="text-slate-500 max-w-xs mx-auto text-sm leading-relaxed">
-                 Choose a location from the hierarchy to view and manage its specific rental rates.
-               </p>
-            </div>
-          )}
+        <div className="flex-1 overflow-y-auto p-2 custom-scrollbar min-h-0">
+          <LocationTree
+            nodes={treeNodes}
+            byId={treeById}
+            children={tree.children}
+            roots={tree.roots}
+            selectedId={selectedLocId}
+            onSelect={(id) => {
+              setSelectedLocId(id);
+              if (id) setDrawerOpen(true);
+            }}
+            onAddChild={() => {}}
+            onEdit={() => {}}
+            onChangeParent={() => {}}
+            readOnly
+          />
         </div>
       </div>
+
+      {/* Rate Editor Drawer Modal */}
+      {drawerOpen && selectedLocId && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+            onClick={() => setDrawerOpen(false)}
+          />
+          {/* Slide-over panel */}
+          <div className="fixed inset-y-0 right-0 z-50 w-full max-w-2xl flex flex-col bg-white shadow-2xl animate-in slide-in-from-right duration-300">
+            {/* Drawer header */}
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between shrink-0 bg-slate-900">
+              <div>
+                <h2 className="text-xl font-black text-white">
+                  {locationsById[selectedLocId]?.name}
+                  {selectedLocId === 'default' && (
+                    <span className="ml-2 text-xs text-amber-400 bg-amber-950 px-2 py-0.5 rounded-lg border border-amber-700 uppercase tracking-widest">
+                      Global Default
+                    </span>
+                  )}
+                </h2>
+                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-0.5">
+                  Rates for all vehicle categories
+                </p>
+              </div>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Rate table */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              <table className="w-full border-collapse">
+                <thead className="sticky top-0 bg-white z-10 shadow-sm">
+                  <tr className="border-b border-slate-100">
+                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Vehicle Class</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">Hourly</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">12 Hours</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-400 tracking-widest">24 Hours</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {carTypes.map(type => {
+                    const rate = pricingMatrix[type.id]?.[selectedLocId] || { hourly: null, "12h": null, "24h": null };
+                    const inheritance = getInheritedRates(type.id, selectedLocId);
+                    const isInherited = !!inheritance;
+
+                    return (
+                      <tr key={type.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="font-black text-slate-900 text-sm tracking-tight">{type.name}</span>
+                            {isInherited ? (
+                              <div className="flex items-center gap-1 mt-1">
+                                <ArrowUp size={10} className="text-blue-500" />
+                                <span className="text-[9px] font-bold text-blue-600 uppercase">Inherited from {inheritance.from}</span>
+                              </div>
+                            ) : selectedLocId !== 'default' ? (
+                              <span className="text-[9px] font-bold text-green-600 uppercase tracking-widest mt-1">Direct Rate</span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <input
+                            type="number"
+                            value={rate.hourly ?? ''}
+                            placeholder={isInherited ? String(inheritance.rates.hourly || '0') : '0'}
+                            onChange={(e) => handleRateChange(type.id, selectedLocId, 'hourly', e.target.value)}
+                            className={`w-28 px-3 py-2 rounded-xl border text-sm font-bold transition-all outline-none ${
+                              isInherited 
+                                ? 'bg-slate-50 border-slate-100 text-slate-400 placeholder:text-slate-400' 
+                                : 'bg-white border-slate-200 text-slate-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10'
+                            }`}
+                          />
+                        </td>
+                        <td className="px-6 py-4">
+                          <input
+                            type="number"
+                            value={rate["12h"] ?? ''}
+                            placeholder={isInherited ? String(inheritance.rates["12h"] || '0') : '0'}
+                            onChange={(e) => handleRateChange(type.id, selectedLocId, '12h', e.target.value)}
+                            className={`w-28 px-3 py-2 rounded-xl border text-sm font-bold transition-all outline-none ${
+                              isInherited 
+                                ? 'bg-slate-50 border-slate-100 text-slate-400 placeholder:text-slate-400' 
+                                : 'bg-white border-slate-200 text-slate-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10'
+                            }`}
+                          />
+                        </td>
+                        <td className="px-6 py-4">
+                          <input
+                            type="number"
+                            value={rate["24h"] ?? ''}
+                            placeholder={isInherited ? String(inheritance.rates["24h"] || '0') : '0'}
+                            onChange={(e) => handleRateChange(type.id, selectedLocId, '24h', e.target.value)}
+                            className={`w-28 px-3 py-2 rounded-xl border text-sm font-bold transition-all outline-none ${
+                              isInherited 
+                                ? 'bg-slate-50 border-slate-100 text-slate-400 placeholder:text-slate-400' 
+                                : 'bg-white border-slate-200 text-slate-900 focus:border-green-500 focus:ring-4 focus:ring-green-500/10'
+                            }`}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Drawer footer */}
+            <div className="shrink-0 border-t border-slate-100">
+              <div className="px-6 py-4 bg-slate-900 flex items-start gap-4">
+                <div className="w-8 h-8 rounded-xl bg-slate-800 flex items-center justify-center shrink-0">
+                  <Info size={16} className="text-green-400" />
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Clear any input to revert to the inherited rate. The system walks up the parent chain and falls back to the Global Default.
+                </p>
+              </div>
+              <div className="px-6 py-4 bg-white flex justify-end gap-3">
+                <button
+                  onClick={() => setDrawerOpen(false)}
+                  className="px-6 py-3 bg-slate-100 text-slate-700 font-bold rounded-2xl hover:bg-slate-200 transition-all"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={async () => { await saveRates(); setDrawerOpen(false); }}
+                  disabled={saving}
+                  className="px-8 py-3 bg-green-700 text-white font-black rounded-2xl hover:bg-green-800 transition-all shadow-lg shadow-green-700/20 disabled:opacity-50 flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {saving ? 'Saving...' : 'Save Rates'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -10,10 +10,13 @@ import { db } from "@/lib/firebase";
 import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, Timestamp, query, where, limit } from "firebase/firestore";
 import { authClient } from "@/lib/auth-client";
 import { PricingRate } from "@/lib/types";
-import { getFullConfig, getPricingBehaviorMode, shouldStorePriceAtBookingTime } from "@/lib/settings-service";
+import { getPricingBehaviorMode, shouldStorePriceAtBookingTime } from "@/lib/settings-service";
+import { useSettings } from "@/components/providers/SettingsProvider";
+import { validateBookingSubmit, checkConflict } from "@/lib/booking-engine";
 import { MOCK_VEHICLES, MOCK_RATES } from "@/lib/mock-data";
 import { ImageWithFallback } from "../ui/ImageWithFallback";
 import PaymentModal from "@/components/modals/PaymentModal";
+import { differenceInHours } from 'date-fns';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,6 +57,18 @@ interface BookingRequest {
 
 type Stage = 'car' | 'destinations' | 'details' | 'confirmation' | 'summary';
 type LocationStep = 'region' | 'province' | 'city' | 'input';
+
+interface PricingResult {
+  baseCost: number;
+  driverFee: number;
+  routeFee: number;
+  taxAmount: number;
+  taxRate: number;
+  total: number;
+  days: number;
+  ratePerDay: number;
+  durationLabel: string;
+}
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
@@ -114,28 +129,18 @@ function calcPrice(
   rates: PricingRate[],
   pricingSheets: any[] = [],
   locations: any[] = [],
-  taxRate: number = 0
-): {
-  baseCost: number;
-  driverFee: number;
-  routeFee: number;
-  taxAmount: number;
-  taxRate: number;
-  total: number;
-  days: number;
-  ratePerDay: number;
-  durationLabel: string;
-} {
-  const startMs = details.startDate && details.startTime 
-    ? new Date(`${details.startDate}T${details.startTime}`).getTime() 
-    : Date.now();
-  const endMs = details.endDate && details.endTime 
-    ? new Date(`${details.endDate}T${details.endTime}`).getTime() 
-    : startMs + 86400000;
+  taxRate: number = 0,
+  globalHourlyRate: number = 200,
+  globalDriverFee: number = 1000
+): PricingResult {
+  const start = new Date(`${details.startDate}T${details.startTime}`);
+  const end = new Date(`${details.endDate}T${details.endTime}`);
   
-  const diffMinutes = Math.max(0, (endMs - startMs) / (1000 * 60));
-  const totalHours = Math.ceil(diffMinutes / 60);
-  
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return { baseCost: 0, driverFee: 0, routeFee: 0, total: 0, taxAmount: 0, taxRate: 0, days: 0, ratePerDay: 0, durationLabel: 'Invalid Dates' };
+  }
+
+  const totalHours = Math.ceil(differenceInHours(end, start));
   const blocks24h = Math.floor(totalHours / 24);
   const remainderHours = totalHours % 24;
   
@@ -150,7 +155,7 @@ function calcPrice(
 
   let rate24h = 0;
   let rate12h = 0;
-  let rateHourly = 200; // Default fallback
+  let rateHourly = globalHourlyRate; 
   
   // 1. Try Pricing Sheets (Regional Pricing)
   if (car.car_type_id && pricingSheets.length > 0) {
@@ -163,7 +168,7 @@ function calcPrice(
         return {
           r24: r?.rate_24hr || r?.["24h"] || 0,
           r12: r?.rate_12hr || r?.["12h"] || 0,
-          rh: r?.rate_hourly || r?.["hourly"] || 200
+          rh: r?.rate_hourly || r?.["hourly"] || globalHourlyRate
         };
       };
 
@@ -172,7 +177,7 @@ function calcPrice(
           const { r24, r12, rh } = resolveRate(locId);
           if (r24 > rate24h) {
             rate24h = r24;
-            rate12h = r12 || r24 * 0.6; // Fallback if 12h not set
+            rate12h = r12 || r24 * 0.6;
             rateHourly = rh;
           }
         }
@@ -205,7 +210,7 @@ function calcPrice(
   }
 
   const baseCost = (blocks24h * rate24h) + remainderCost;
-  const driverFee = details.professionalDriver === 'yes' ? 1000 : 0;
+  const driverFee = details.professionalDriver === 'yes' ? globalDriverFee : 0;
   const routeFee = Math.max(0, destinations.length - 1) * 300;
   
   // For display purposes, 'days' is now 24h blocks + fractional remainder
@@ -216,7 +221,8 @@ function calcPrice(
   if (remainderHours > 0) labelParts.push(`${remainderHours} Hr${remainderHours > 1 ? 's' : ''}`);
   const durationLabel = labelParts.join(', ') || '0 Hrs';
 
-  const taxAmount = Math.round(baseCost * (taxRate / 100));
+  const subtotal = baseCost + driverFee + routeFee;
+  const taxAmount = Math.round(subtotal * (taxRate / 100));
 
   return { 
     baseCost, 
@@ -240,9 +246,18 @@ function formatDestDisplay(d: Destination) {
   return [d.specificLocation, d.city, d.province].filter(Boolean).join(', ');
 }
 
-const withTimeout = (promise: Promise<any>, ms: number) => {
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
-  return Promise.race([promise, timeout]);
+// Helper function to add timeout to promises
+const withTimeout = <T,>(promise: Promise<T>, ms: number, errorMessage: string = 'TIMEOUT'): Promise<T> => {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(errorMessage));
+    }, ms);
+    
+    promise
+      .then(resolve)
+      .catch(reject)
+      .finally(() => clearTimeout(timeout));
+  });
 };
 
 // ─── Sub-Components ───────────────────────────────────────────────────────────
@@ -261,7 +276,7 @@ function ProgressBar({ stage }: { stage: Stage }) {
             <motion.div
               initial={false}
               animate={{
-                backgroundColor: i < idx ? '#15803d' : i === idx ? '#15803d' : '#e2e8f0',
+                backgroundColor: i < idx ? '#15803d' : i === idx ? '#15803d' : 'var(--border-default)',
                 scale: i === idx ? 1.1 : 1,
               }}
               className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all shadow-sm ${
@@ -335,7 +350,8 @@ function CarSelectionStage({
                      </div>
                   </div>
                   <div className="absolute top-4 right-4">
-                     <span className="bg-white/90 backdrop-blur-md text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-slate-200 shadow-sm">
+                     <span className="bg-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-slate-200 shadow-sm"
+                       style={{ backgroundColor: "var(--bg-surface)", borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>
                         {vehicle.type}
                      </span>
                   </div>
@@ -653,6 +669,7 @@ function BookingDetailsStage({
   carId: string;
   excludeBookingId?: string;
 }) {
+  const { settings: config } = useSettings();
   const [dateTimeError, setDateTimeError] = useState<string>('');
   const [availabilityWarning, setAvailabilityWarning] = useState<string>('');
   const [isChecking, setIsChecking] = useState(false);
@@ -662,10 +679,10 @@ function BookingDetailsStage({
 
   // B2.5 — Force driver to 'yes' if require_driver is true
   useEffect(() => {
-    if (getFullConfig().booking.require_driver && details.professionalDriver !== 'yes') {
+    if (config.booking.require_driver && details.professionalDriver !== 'yes') {
       onChange({ ...details, professionalDriver: 'yes' });
     }
-  }, []);
+  }, [config.booking.require_driver]);
 
   useEffect(() => {
     if (details.startDate && details.startTime && details.endDate && details.endTime && !dateTimeError) {
@@ -676,27 +693,24 @@ function BookingDetailsStage({
 }, [carId, details.startDate, details.startTime, details.endDate, details.endTime, dateTimeError, excludeBookingId]);
 
   async function checkOverlap() {
-    if (!db) return;
+    if (!db || !carId || !details.startDate || !details.endDate) return;
     setIsChecking(true);
     setAvailabilityWarning('');
     
     try {
       const start = new Date(`${details.startDate}T${details.startTime}`);
       const end = new Date(`${details.endDate}T${details.endTime}`);
-      const q = query(collection(db, 'bookings'), where('car_id', '==', carId), where('status', 'in', ['approved', 'active', 'pending']));
-      
-      const snap = await getDocs(q);
-      const conflicts = snap.docs.filter((docRef: any) => {
-        if (excludeBookingId && docRef.id === excludeBookingId) return false;
-          const b = docRef.data();
-          const bStart = b.start_date instanceof Timestamp ? b.start_date.toDate() : new Date(b.start_date);
-          const bEnd = b.end_date instanceof Timestamp ? b.end_date.toDate() : new Date(b.end_date);
-          return bStart < end && bEnd > start;
-      });
+      // Use booking-engine checkConflict for buffer-time-aware overlap detection (B3)
+      const conflict = await checkConflict(carId, start.toISOString(), end.toISOString(), excludeBookingId || undefined);
+      const cfg = config;
+      const policy = cfg.availability.overlap_policy;
 
-      if (conflicts.length > 0) {
-        const confirmed = conflicts.find((d: any) => ['approved', 'active'].includes(d.data().status));
-        setAvailabilityWarning(confirmed ? 'blocked' : 'warning');
+      if (conflict.hasConflict) {
+        if (policy === 'block' && !cfg.booking.auto_reject_on_conflict) {
+          setAvailabilityWarning('blocked');
+        } else {
+          setAvailabilityWarning('warning');
+        }
       }
     } catch (error) {
       console.error("Availability check failed");
@@ -766,7 +780,7 @@ function BookingDetailsStage({
              <div className="p-4 bg-slate-50 border-b border-slate-100">
                <h5 className="text-sm font-bold text-slate-900 flex items-center gap-2"><Users size={16} className="text-green-700"/> Driver Options</h5>
                <p className="text-[10px] uppercase font-bold text-slate-500 mt-1 pl-6">
-                 {getFullConfig().booking.require_driver 
+                 {config.booking.require_driver 
                    ? '✓ A professional driver is required for all bookings.' 
                    : 'Would you like a professional driver?'}
                </p>
@@ -774,11 +788,11 @@ function BookingDetailsStage({
              <div className="p-4">
                 <div className="relative">
                   <select
-                    value={getFullConfig().booking.require_driver ? 'yes' : details.professionalDriver}
-                    onChange={(e) => !getFullConfig().booking.require_driver && update('professionalDriver', e.target.value)}
-                    disabled={getFullConfig().booking.require_driver}
+                    value={config.booking.require_driver ? 'yes' : details.professionalDriver}
+                    onChange={(e) => !config.booking.require_driver && update('professionalDriver', e.target.value)}
+                    disabled={config.booking.require_driver}
                     className={`w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold appearance-none outline-none transition-all ${
-                      getFullConfig().booking.require_driver 
+                      config.booking.require_driver 
                         ? 'text-slate-700 cursor-not-allowed opacity-75 focus:border-slate-200' 
                         : 'text-slate-800 focus:border-green-600'
                     }`}
@@ -786,11 +800,11 @@ function BookingDetailsStage({
                     <option value="no">Self Drive (No Driver)</option>
                     <option value="yes">Yes, include Driver (+₱1000)</option>
                   </select>
-                  {getFullConfig().booking.require_driver && (
+                  {config.booking.require_driver && (
                     <Lock size={16} className="absolute right-12 top-1/2 -translate-y-1/2 text-amber-600 pointer-events-none" />
                   )}
                 </div>
-                {getFullConfig().booking.require_driver && (
+                {config.booking.require_driver && (
                   <p className="text-xs text-amber-700 mt-2 flex items-start gap-2">
                     <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
                     <span>Professional driver service is mandatory for this booking type and has been automatically selected.</span>
@@ -883,7 +897,19 @@ function ConfirmationStage({
   onBack: () => void;
   onAddToRequest: () => void;
 }) {
-  const pricing = calcPrice(car, details, destinations, rates, pricingSheets, locations);
+  const { settings: config } = useSettings();
+  const cfg = config;
+  const pricing = calcPrice(
+    car, 
+    details, 
+    destinations, 
+    rates, 
+    pricingSheets, 
+    locations, 
+    cfg.system.taxRate,
+    cfg.pricing.global_hourly_rate,
+    cfg.pricing.global_driver_fee
+  );
   const routeLegs = destinations.map((_, i) => ({
     from: i === 0 ? 'Pickup (Davao HQ)' : formatDestDisplay(destinations[i - 1]),
     to: formatDestDisplay(destinations[i]),
@@ -1002,14 +1028,32 @@ function ConfirmationStage({
                        <span className="text-slate-300">{formatCurrency(pricing.routeFee)}</span>
                     </div>
                   )}
+                  {pricing.taxAmount > 0 && (
+                    <div className="flex justify-between items-center py-1">
+                       <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                          <span className="text-slate-300">Tax ({pricing.taxRate}%)</span>
+                       </div>
+                       <span className="text-slate-300">{formatCurrency(pricing.taxAmount)}</span>
+                    </div>
+                  )}
                </div>
-               
+
                <div className="mt-8 pt-6 border-t border-white/10">
                   <div className="flex justify-between items-baseline mb-4">
                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Investment</span>
                      <span className="text-4xl font-black text-white" style={{ fontFamily: 'var(--font-heading)' }}>{formatCurrency(pricing.total)}</span>
                   </div>
-
+                  {config.payment.downpayment_required && (
+                    <div className="flex justify-between items-center py-2 bg-white/5 rounded-lg px-3">
+                      <span className="text-xs text-green-400 font-bold">Required Downpayment</span>
+                      <span className="text-sm font-bold text-white">
+                        {config.payment.downpayment_type === 'percentage'
+                          ? `${config.payment.downpayment_value}%`
+                          : formatCurrency(config.payment.downpayment_value)}
+                      </span>
+                    </div>
+                  )}
                </div>
             </div>
           </div>
@@ -1175,6 +1219,7 @@ interface BookingFlowProps {
 }
 
 export default function ModernBookingFlow({ onClose, editMode, existingBooking, onEditComplete }: BookingFlowProps) {
+  const { settings: config } = useSettings();
   const [stage, setStage] = useState<Stage>('car');
   const [showLocationPicker, setShowLocationPicker] = useState(false);
 
@@ -1271,10 +1316,17 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
         const mappedVehicles: Vehicle[] = vehsSnap.docs.map((d: any) => {
            const data = d.data();
            const ct = carTypesMap[data.car_type_id];
+           let typeName = ct ? ct.name : 'Standard';
+           
+           // If not found in car_types collection, extract name from car_type_id
+           if (!ct && data.car_type_id) {
+             typeName = data.car_type_id.replace('type_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+           }
+           
            return {
              id: d.id,
              name: data.name,
-             type: ct ? ct.name : 'Standard',
+             type: typeName,
              seats: data.specs?.seats || 5,
              transmission: data.specs?.transmission || 'Automatic',
              pricePerDay: data.base_price_24hr || 4000,
@@ -1297,16 +1349,22 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
   }
 
   function loadMockFallback() {
-     setVehicles(MOCK_VEHICLES.map(v => ({
-        id: v.id,
-        name: v.name,
-        type: v.car_type?.name || 'Standard',
-        seats: v.seats || 5,
-        transmission: v.transmission || 'Auto',
-        pricePerDay: 4000,
-        image: v.image_url || 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1080',
-        car_type_id: v.car_type_id
-     })));
+     setVehicles(MOCK_VEHICLES.map(v => {
+        let typeName = v.car_type?.name || 'Standard';
+        if (!v.car_type?.name && v.car_type_id) {
+          typeName = v.car_type_id.replace('type_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+        return {
+          id: v.id,
+          name: v.name,
+          type: typeName,
+          seats: v.seats || 5,
+          transmission: v.transmission || 'Auto',
+          pricePerDay: 4000,
+          image: v.image_url || 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1080',
+          car_type_id: v.car_type_id
+        };
+     }));
      setRates(MOCK_RATES);
   }
 
@@ -1324,7 +1382,18 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
 
   function handleAddToRequest() {
     if (!selectedCar) return;
-    const pricing = calcPrice(selectedCar, bookingDetails, destinations, rates, pricingSheets, locations);
+    const cfg = config;
+    const pricing = calcPrice(
+      selectedCar, 
+      bookingDetails, 
+      destinations, 
+      rates, 
+      pricingSheets, 
+      locations, 
+      cfg.system.taxRate,
+      cfg.pricing.global_hourly_rate,
+      cfg.pricing.global_driver_fee
+    );
     const newRequest: BookingRequest = {
       id: editingId || `req-${Date.now()}`,
       car: selectedCar,
@@ -1390,6 +1459,7 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
            return;
          }
          
+         const cfg = config;
          const ref = doc(firestore, 'bookings', existingBooking.id);
          await updateDoc(ref, {
             car_id: req.car.id,
@@ -1398,7 +1468,7 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
             total_price: req.totalPrice,
             status: 'pending', // Revert to pending for re-approval
             destinations: req.destinations.map(d => formatDestDisplay(d)),
-            with_driver: req.details.professionalDriver === 'yes'
+            with_driver: cfg.booking.require_driver || req.details.professionalDriver === 'yes'
          });
          
          setShowSuccess(true);
@@ -1411,7 +1481,7 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
         
         // Create a booking document in Firebase for each request in the bucket
         const pricingMode = getPricingBehaviorMode();
-        const bookingPromises = bookingRequests.map(req => {
+        const bookingPromises = bookingRequests.map(async req => {
           if (!req.details.startDate || !req.details.startTime || !req.details.endDate || !req.details.endTime) {
             throw new Error("Please fill in all date and time fields.");
           }
@@ -1423,15 +1493,29 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
             throw new Error("Invalid date or time selected.");
           }
           
-          const withDriver = req.details.professionalDriver === 'yes';
-          const driverFee = withDriver ? 1000 : 0;
+          // B2.5 — enforce require_driver setting
+          const cfg = config;
+          const withDriver = cfg.booking.require_driver || req.details.professionalDriver === 'yes';
+          const driverFeeVal = withDriver ? cfg.pricing.global_driver_fee : 0;
           
           // Recalculate to get the exact rate used
-          const pInfo = calcPrice(req.car, req.details, req.destinations, rates, pricingSheets, locations);
+          const pInfo = calcPrice(
+            req.car, 
+            req.details, 
+            req.destinations, 
+            rates, 
+            pricingSheets, 
+            locations, 
+            cfg.system.taxRate,
+            cfg.pricing.global_hourly_rate,
+            cfg.pricing.global_driver_fee
+          );
           
           const priceBreakdown = shouldStorePriceAtBookingTime() ? {
-            baseTotal: req.totalPrice - (withDriver ? 1000 : 0),
-            driverFee: withDriver ? 1000 : 0,
+            baseTotal: req.totalPrice - driverFeeVal - pInfo.taxAmount,
+            driverFee: driverFeeVal,
+            taxAmount: pInfo.taxAmount,
+            taxRate: pInfo.taxRate,
             totalHours: (pInfo.days || 0) * 24,
             blocks24h: pInfo.days || 0,
             blocks12h: 0,
@@ -1446,24 +1530,68 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
             scheduledPriceApplied: false,
             calculatedAt: new Date().toISOString()
           } : null;
-          
-          return addDoc(collection(firestore, 'bookings'), {
-            user_id: user?.id || 'guest_booking',
-            car_id: req.car.id,
-            start_date: Timestamp.fromDate(start),
-            end_date: Timestamp.fromDate(end),
-            total_price: req.totalPrice,
-            price_mode: pricingMode,
-            price_breakdown: priceBreakdown,
-            status: 'pending',
-            destinations: req.destinations.map(d => formatDestDisplay(d)),
-            with_driver: withDriver,
-            pickup_location_id: 'loc_gensan',
-            created_at: serverTimestamp()
-          });
+
+          const downpaymentAmount = cfg.payment.downpayment_required
+            ? (cfg.payment.downpayment_type === 'percentage'
+                ? Math.round(req.totalPrice * (cfg.payment.downpayment_value / 100))
+                : cfg.payment.downpayment_value)
+            : 0;
+
+          const paymentExpiresAt = new Date(Date.now() + cfg.payment.pending_payment_expiry_minutes * 60_000).toISOString();
+
+          // B2.1 — validate submission via booking-engine
+          const validation = await withTimeout(
+            validateBookingSubmit(req.car.id, start.toISOString(), end.toISOString()),
+            10000,
+            'Booking validation timed out. Please try again.'
+          );
+          if (!validation.allowed) {
+            throw new Error(validation.reason || 'Booking cannot be submitted.');
+          }
+
+          const isAutoRejected = validation.autoReject ?? false;
+          const bookingStatus = isAutoRejected ? 'rejected' : 'pending';
+          const activityLog = isAutoRejected ? [{
+            at: new Date().toISOString(),
+            by: 'system',
+            action: 'booking_rejected',
+            detail: validation.reason || 'Automatically rejected due to scheduling conflict.'
+          }] : [{
+            at: new Date().toISOString(),
+            by: user?.name || 'customer',
+            action: 'booking_created',
+            detail: 'Booking request submitted via web platform.'
+          }];
+
+          return withTimeout(
+            addDoc(collection(firestore, 'bookings'), {
+              user_id: user?.id || 'guest_booking',
+              car_id: req.car.id,
+              start_date: Timestamp.fromDate(start),
+              end_date: Timestamp.fromDate(end),
+              total_price: req.totalPrice,
+              price_mode: pricingMode,
+              price_breakdown: priceBreakdown,
+              status: bookingStatus,
+              destinations: req.destinations.map(d => formatDestDisplay(d)),
+              with_driver: withDriver,
+              pickup_location_id: 'loc_gensan',
+              payment_timing: cfg.payment.payment_timing,
+              payment_expires_at: paymentExpiresAt,
+              downpayment_amount: downpaymentAmount,
+              activity_log: activityLog,
+              created_at: serverTimestamp()
+            }),
+            15000,
+            'Failed to create booking due to timeout. Please check your connection and try again.'
+          );
         });
 
-        await Promise.all(bookingPromises);
+        await withTimeout(
+          Promise.all(bookingPromises),
+          30000,
+          'Booking submission timed out. Please try again.'
+        );
         setShowSuccess(true);
       }
     } catch (error: any) {
@@ -1494,15 +1622,15 @@ export default function ModernBookingFlow({ onClose, editMode, existingBooking, 
        {isMainFlow && !showLocationPicker && !showSuccess && <ProgressBar stage={stage} />}
        <div className="flex-1 overflow-hidden">
           {showSuccess ? (
-             <div className="flex flex-col items-center justify-center h-full gap-6 p-8 text-center bg-green-50/50 rounded-2xl">
-               <div className="w-24 h-24 bg-white border border-green-200 rounded-full flex items-center justify-center shadow-2xl shadow-green-700/20">
-                 <Check size={48} className="text-green-700" />
+             <div className="flex flex-col items-center justify-center h-full gap-6 p-8 text-center rounded-2xl" style={{ backgroundColor: 'var(--success-bg)' }}>
+               <div className="w-24 h-24 rounded-full flex items-center justify-center shadow-2xl" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-subtle)', borderWidth: '1px', borderStyle: 'solid' }}>
+                 <Check size={48} style={{ color: 'var(--success)' }} />
                </div>
                <div>
-                 <h2 className="text-3xl font-bold text-slate-900 mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
+                 <h2 className="text-3xl font-bold mb-3" style={{ fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>
                    Booking Requests Sent!
                  </h2>
-                 <p className="text-slate-600 font-medium max-w-sm mx-auto leading-relaxed">
+                 <p className="font-medium max-w-sm mx-auto leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                    Thank you for choosing QuickRide Booking. Our team will review your {bookingRequests.length} vehicle request(s) and contact you shortly.
                  </p>
                </div>

@@ -56,11 +56,23 @@ export default function FleetPage() {
         if (vehsSnap.docs.length > 0) {
           console.log("✅ Fleet Cloud Sync: Success");
           
-          const vehs = vehsSnap.docs.map((doc: any) => ({
-            id: doc.id,
-            ...doc.data(),
-            car_type: carTypesMap[doc.data().car_type_id] || { name: 'Unknown', driver_only: false }
-          }));
+          const vehs = vehsSnap.docs.map((doc: any) => {
+            const vehicleData = doc.data();
+            const carTypeId = vehicleData.car_type_id;
+            let carType = carTypesMap[carTypeId];
+            
+            // If not found in car_types collection, extract name from car_type_id
+            if (!carType && carTypeId) {
+              const typeName = carTypeId.replace('type_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+              carType = { name: typeName, driver_only: false };
+            }
+            
+            return {
+              id: doc.id,
+              ...vehicleData,
+              car_type: carType || { name: 'Unknown', driver_only: false }
+            };
+          });
 
           const rt: any[] = [];
           ratesSnap.docs.forEach((doc: any) => {

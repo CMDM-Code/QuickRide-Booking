@@ -14,13 +14,15 @@ import {
 } from "firebase/firestore";
 import { authClient } from "@/lib/auth-client";
 import { Location, PricingRate, PricingSheet } from "@/lib/types";
-import { calculateTotalRental } from "@/lib/pricing-engine";
+import { calculateTotalRental, applyTax } from "@/lib/pricing-engine";
+import { validateBookingSubmit, checkConflict } from "@/lib/booking-engine";
 import { createNotification } from "@/lib/notification-service";
 import { buildLocationsIndex, resolveRatesForLocation } from "@/lib/pricing";
 import { applyScheduleAdjustment, normalizeSchedule, pickActiveSchedule, type PricingSchedule } from "@/lib/schedules";
 import { DEFAULT_BOOKING_FORM_CONFIG, normalizeBookingFormConfig } from "@/lib/booking-form-config";
 import { logSystemError } from "@/lib/error-service";
 import { getPricingBehaviorMode, shouldStorePriceAtBookingTime } from "@/lib/settings-service";
+import { useSettings } from "@/components/providers/SettingsProvider";
 import { format, isValid, differenceInHours } from "date-fns";
 import { MOCK_LOCATIONS, MOCK_VEHICLES, MOCK_RATES } from "@/lib/mock-data";
 import { AlertCircle, CheckCircle2, Info, RefreshCw } from "lucide-react";
@@ -38,6 +40,7 @@ const withTimeout = (promise: Promise<any>, ms: number) => {
 };
 
 export default function BookingForm() {
+  const { settings: config } = useSettings();
   const [step, setStep] = useState<'selecting' | 'reviewing'>('selecting');
   const [locations, setLocations] = useState<Location[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -105,11 +108,23 @@ export default function BookingForm() {
           console.log("✅ Firestore Sync Successful");
           
           const carTypesMap = Object.fromEntries(carTypesSnap.docs.map((d: any) => [d.id, d.data()]));
-          const vehs = vehsSnap.docs.map((d: any) => ({
-            id: d.id,
-            ...d.data(),
-            car_type: carTypesMap[d.data().car_type_id] || { name: 'Standard', driver_only: false }
-          }));
+          const vehs = vehsSnap.docs.map((d: any) => {
+            const data = d.data();
+            const carTypeId = data.car_type_id;
+            let carType = carTypesMap[carTypeId];
+            
+            // If not found in car_types collection, extract name from car_type_id
+            if (!carType && carTypeId) {
+              const typeName = carTypeId.replace('type_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+              carType = { name: typeName, driver_only: false };
+            }
+            
+            return {
+              id: d.id,
+              ...data,
+              car_type: carType || { name: 'Standard', driver_only: false }
+            };
+          });
 
           setLocations(locsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as Location)));
           setVehicles(vehs);
@@ -157,34 +172,24 @@ export default function BookingForm() {
   }, [selectedVehicleId, startDate, startTime, endDate, endTime]);
 
   async function checkOverlap() {
-    if (!db) return;
+    if (!db || !selectedVehicleId || !startDate || !endDate) return;
     const start = new Date(`${startDate}T${startTime}`);
     const end = new Date(`${endDate}T${endTime}`);
 
     try {
-      const q = query(
-          collection(db, 'bookings'),
-          where('car_id', '==', selectedVehicleId),
-          where('status', 'in', ['approved', 'active', 'pending'])
-      );
-      
-      const snap = await getDocs(q);
-      const conflicts = snap.docs.filter((docRef: any) => {
-          const b = docRef.data();
-          const bStart = b.start_date instanceof Timestamp ? b.start_date.toDate() : new Date(b.start_date);
-          const bEnd = b.end_date instanceof Timestamp ? b.end_date.toDate() : new Date(b.end_date);
-          return bStart < end && bEnd > start;
-      });
+      // Use booking-engine checkConflict for buffer-time-aware overlap detection (B3)
+      const conflict = await checkConflict(selectedVehicleId, start.toISOString(), end.toISOString());
+      const cfg = config;
+      const policy = cfg.availability.overlap_policy;
 
-      if (conflicts.length > 0) {
-        const confirmed = conflicts.find((d: any) => ['approved', 'active'].includes(d.data().status));
-        if (confirmed) {
+      if (conflict.hasConflict) {
+        const confirmed = conflict.conflictingIds.length > 0;
+        if (policy === 'block' && !cfg.booking.auto_reject_on_conflict) {
           setAvailabilityStatus('blocked');
-          setConflictBooking(confirmed.data());
         } else {
           setAvailabilityStatus('warning');
-          setConflictBooking(conflicts[0].data());
         }
+        setConflictBooking({ policy, autoReject: cfg.booking.auto_reject_on_conflict });
       } else {
         setAvailabilityStatus('available');
         setConflictBooking(null);
@@ -267,7 +272,9 @@ export default function BookingForm() {
       return { pricing: null, error: "No pricing found for the selected route." as const };
     }
 
-    const forcedWithDriver = Boolean(vehicle?.car_type?.driver_only);
+    // B2.5 — enforce require_driver setting
+    const cfg = config;
+    const forcedWithDriver = Boolean(vehicle?.car_type?.driver_only) || cfg.booking.require_driver;
     const finalWithDriver = forcedWithDriver ? true : withDriver;
     const pricing = calculateTotalRental(start, end, max12h, max24h, finalWithDriver, pricingMeta.hourlyRate, pricingMeta.driverFee);
 
@@ -282,8 +289,11 @@ export default function BookingForm() {
       pricing.blocks12h * pricing.baseRate12hr +
       pricing.extraHours * pricingMeta.hourlyRate;
     const adjustedBase = activeSchedule ? applyScheduleAdjustment(baseTotal, activeSchedule.adjustment) : baseTotal;
-    const adjustedTotal = adjustedBase + pricing.driverFee;
-    const adjustedPricing = { ...pricing, totalPrice: adjustedTotal };
+    const preTaxTotal = adjustedBase + pricing.driverFee;
+
+    // B5.2 — apply tax
+    const taxResult = applyTax(preTaxTotal, cfg.system.taxRate);
+    const adjustedPricing = { ...pricing, totalPrice: taxResult.total, taxAmount: taxResult.taxAmount, taxRate: cfg.system.taxRate };
 
     return { pricing: adjustedPricing, appliedFrom, forcedWithDriver, schedule: activeSchedule };
   }, [dropoffLocationIds, selectedVehicleId, startDate, startTime, endDate, endTime, withDriver, vehicles, pricingSheets, locations, pricingMeta, schedules]);
@@ -355,8 +365,11 @@ export default function BookingForm() {
     }
 
     if (availabilityStatus === 'blocked') {
-      setFormError("The selected vehicle is already booked for this period.");
-      return;
+      const cfg = config;
+      if (!cfg.booking.auto_reject_on_conflict) {
+        setFormError("The selected vehicle is already booked for this period.");
+        return;
+      }
     }
 
     if (!startDate || !startTime || !endDate || !endTime) {
@@ -422,10 +435,21 @@ export default function BookingForm() {
         return;
       }
 
+      // B2.1 — validate submission via booking-engine (maintenance, conflict, overlap policy)
+      const validation = await validateBookingSubmit(selectedVehicleId, start.toISOString(), end.toISOString());
+      if (!validation.allowed) {
+        setFormError(validation.reason || "Booking cannot be submitted.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const cfg = config;
       const pricingMode = getPricingBehaviorMode();
       const priceBreakdown = shouldStorePriceAtBookingTime() ? {
-        baseTotal: pricing.totalPrice - pricing.driverFee,
+        baseTotal: pricing.totalPrice - pricing.driverFee - (pricing as any).taxAmount,
         driverFee: pricing.driverFee,
+        taxAmount: (pricing as any).taxAmount || 0,
+        taxRate: (pricing as any).taxRate || 0,
         totalHours: pricing.totalHours,
         blocks24h: pricing.blocks24h,
         blocks12h: pricing.blocks12h,
@@ -441,6 +465,18 @@ export default function BookingForm() {
         calculatedAt: new Date().toISOString()
       } : null;
 
+      const isAutoRejected = validation.autoReject ?? false;
+      const bookingStatus = isAutoRejected ? 'rejected' : 'pending';
+      const activityLog = isAutoRejected ? [{
+        at: new Date().toISOString(),
+        by: 'system',
+        action: 'booking_rejected',
+        detail: validation.reason || 'Automatically rejected due to scheduling conflict.'
+      }] : [];
+
+      // B2.5 — enforce require_driver
+      const finalWithDriver = cfg.booking.require_driver || withDriver;
+
       const bookingDoc = await addDoc(collection(db, 'bookings'), {
         user_id: user.id,
         car_id: selectedVehicleId,
@@ -449,12 +485,13 @@ export default function BookingForm() {
         total_price: pricing.totalPrice,
         price_mode: pricingMode,
         price_breakdown: priceBreakdown,
-        status: 'pending',
+        status: bookingStatus,
         specific_address: (formConfig.fields.specific_address?.enabled ?? true) ? specificAddress : '',
         custom_fields: customFields,
-        with_driver: withDriver,
+        with_driver: finalWithDriver,
         pickup_location_id: 'loc_gensan',
         participant_ids: [user.id],
+        activity_log: activityLog,
         created_at: serverTimestamp()
       });
 
@@ -564,6 +601,12 @@ export default function BookingForm() {
                 <div className="flex justify-between text-slate-600">
                   <span>Professional Driver Fee</span>
                   <span>₱{pricing.driverFee.toLocaleString()}</span>
+                </div>
+              )}
+              {(pricing as any).taxAmount > 0 && (
+                <div className="flex justify-between text-slate-600">
+                  <span>Tax ({(pricing as any).taxRate}%)</span>
+                  <span>₱{(pricing as any).taxAmount.toLocaleString()}</span>
                 </div>
               )}
               <div className="flex justify-between text-xl font-black text-green-700 pt-4 border-t border-slate-50 mt-4">

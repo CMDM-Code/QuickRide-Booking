@@ -1,17 +1,50 @@
 'use client';
 import { useState } from 'react';
-import { PaymentSettings } from '@/lib/settings-service';
+import { PaymentSettings, PricingSettings } from '@/lib/settings-service';
 import { Section, Field, Input, Toggle, RadioGroup } from './shared';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, DollarSign } from 'lucide-react';
 
-interface Props { data: PaymentSettings; onChange: (d: PaymentSettings) => void; }
-export default function PaymentTab({ data, onChange }: Props) {
+interface Props { 
+  data: PaymentSettings; 
+  pricing: PricingSettings;
+  onChange: (d: PaymentSettings) => void; 
+  onPricing: (d: PricingSettings) => void;
+}
+
+export default function PaymentTab({ data, pricing, onChange, onPricing }: Props) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const upd = <K extends keyof PaymentSettings>(k: K, v: PaymentSettings[K]) => onChange({ ...data, [k]: v });
+  const pUpd = <K extends keyof PricingSettings>(k: K, v: PricingSettings[K]) => onPricing({ ...pricing, [k]: v });
 
   return (
     <div className="space-y-4">
-      {/* ── Core ── */}
+      {/* ── Pricing Basics ── */}
+      <Section title="Global Pricing Rules" description="Default rates applied across the system when specific rules don't exist.">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Global Hourly Rate (₱)" hint="Used for late fees and extra time.">
+            <Input type="number" min={0} value={pricing.global_hourly_rate} onChange={e => pUpd('global_hourly_rate', +e.target.value)} />
+          </Field>
+          <Field label="Global Driver Fee (₱)" hint="Flat fee per booking when driver is required.">
+            <Input type="number" min={0} value={pricing.global_driver_fee} onChange={e => pUpd('global_driver_fee', +e.target.value)} />
+          </Field>
+        </div>
+        <div className="mt-4 p-4 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl space-y-3">
+          <Toggle 
+            label="Allow Admin Price Override" 
+            description="Administrators can manually set any price on a booking document." 
+            checked={pricing.allow_admin_pricing_override} 
+            onChange={v => pUpd('allow_admin_pricing_override', v)} 
+          />
+          <Toggle 
+            label="Allow Staff Price Override" 
+            description="Staff members can manually set any price on a booking document." 
+            checked={pricing.allow_staff_pricing_override} 
+            onChange={v => pUpd('allow_staff_pricing_override', v)} 
+          />
+        </div>
+      </Section>
+
+      {/* ── Downpayment ── */}
       <Section title="Downpayment" description="Configure if and how a downpayment is collected before confirmation.">
         <Toggle label="Require Downpayment" description="Clients must pay a downpayment to proceed." checked={data.downpayment_required} onChange={v => upd('downpayment_required', v)} />
         {data.downpayment_required && (
@@ -61,7 +94,7 @@ export default function PaymentTab({ data, onChange }: Props) {
       {/* ── Advanced ── */}
       <button
         onClick={() => setShowAdvanced(v => !v)}
-        className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors pt-1"
+        className="flex items-center gap-2 text-xs font-bold text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors pt-1"
       >
         {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         {showAdvanced ? 'Hide Advanced Settings' : 'Show Advanced Settings'}

@@ -1,6 +1,5 @@
 'use client';
 
-import StaffLayout from "../layout";
 import { useEffect, useState } from "react";
 import { getAllBookings, type FirestoreBooking } from "@/lib/booking-service";
 
@@ -59,8 +58,7 @@ export default function CustomersPage() {
   }, []);
 
   return (
-    <StaffLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Customer Management</h1>
           <p className="text-slate-600 mt-1">View customer profiles and rental history</p>
@@ -115,6 +113,5 @@ export default function CustomersPage() {
           )}
         </div>
       </div>
-    </StaffLayout>
   );
 }

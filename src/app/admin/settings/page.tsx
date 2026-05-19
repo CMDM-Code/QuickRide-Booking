@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { fetchFullConfig, saveConfigSection, FullSystemConfig, getDefaultFullConfig } from '@/lib/settings-service';
+import { fetchFullConfig, saveFullConfig, FullSystemConfig, getDefaultFullConfig } from '@/lib/settings-service';
 import GeneralTab from './_tabs/GeneralTab';
 import BookingTab from './_tabs/BookingTab';
 import PaymentTab from './_tabs/PaymentTab';
@@ -9,6 +9,9 @@ import SystemTab from './_tabs/SystemTab';
 import {
   Settings2, ClipboardList, CreditCard, Car, Cpu, CheckCircle2, Loader2,
 } from 'lucide-react';
+import { PageHeader } from "@/components/layout/DashboardShell";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 // A7: Collapsed from 10 tabs → 5 tabs
 // Pricing, Availability, Chat, Notifications, Roles tabs removed.
@@ -40,24 +43,11 @@ export default function SystemSettingsPage() {
     setConfig(prev => ({ ...prev, [section]: data }));
   };
 
-  // Save all sections relevant to the current tab
+  // Save the full configuration state
   const handleSave = async () => {
     setSaving(true); setError(null);
     try {
-      if (active === 'general') {
-        await saveConfigSection('general', config.general);
-      } else if (active === 'booking') {
-        await saveConfigSection('booking', config.booking);
-        await saveConfigSection('availability', config.availability);
-      } else if (active === 'payment') {
-        await saveConfigSection('payment', config.payment);
-      } else if (active === 'fleet') {
-        await saveConfigSection('vehicles', config.vehicles);
-        await saveConfigSection('chat', config.chat);
-      } else if (active === 'system') {
-        await saveConfigSection('system', config.system);
-        await saveConfigSection('notifications', config.notifications);
-      }
+      await saveFullConfig(config);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e: any) {
@@ -77,37 +67,37 @@ export default function SystemSettingsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900">System Settings</h1>
-          <p className="text-slate-500 mt-1 font-medium">5 configuration modules — all changes sync to Firestore</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {error && (
-            <span className="text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">
-              {error}
-            </span>
-          )}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg ${
-              saved   ? 'bg-green-600 text-white scale-105' :
-              saving  ? 'bg-slate-300 text-slate-500 cursor-not-allowed' :
-                        'bg-green-700 hover:bg-green-800 text-white'
-            }`}
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle2 className="w-4 h-4" /> : null}
-            {saved ? 'Saved!' : saving ? 'Saving…' : 'Save Changes'}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="System Settings"
+        subtitle="5 configuration modules — all changes sync to Firestore"
+        action={
+          <div className="flex items-center gap-3">
+            {error && (
+              <span className="text-xs font-bold text-[var(--color-error)] bg-[var(--color-error-light)] border border-[var(--color-error)]/20 px-3 py-2 rounded-xl">
+                {error}
+              </span>
+            )}
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className={`shadow-lg w-40 justify-center ${
+                saved   ? 'bg-[var(--color-success)] hover:bg-[var(--color-success)] text-white scale-105 transition-transform' :
+                saving  ? 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] cursor-not-allowed border border-[var(--border-subtle)] hover:bg-[var(--bg-tertiary)]' :
+                          'bg-[var(--color-primary-600)] hover:bg-[var(--color-primary-700)] text-white'
+              }`}
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : saved ? <CheckCircle2 className="w-4 h-4 mr-2" /> : null}
+              {saved ? 'Saved!' : saving ? 'Saving…' : 'Save Changes'}
+            </Button>
+          </div>
+        }
+      />
 
       {/* Layout */}
       <div className="flex gap-6">
         {/* Tab Sidebar */}
         <aside className="w-48 shrink-0">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <Card padding="none" className="overflow-hidden mb-3">
             {TABS.map(tab => {
               const Icon = tab.icon;
               const isActive = active === tab.id;
@@ -115,30 +105,30 @@ export default function SystemSettingsPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActive(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold transition-all border-b border-slate-50 last:border-0 text-left ${
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold transition-all border-b border-[var(--border-subtle)] last:border-0 text-left ${
                     isActive
-                      ? 'bg-green-50 text-green-800 border-l-[3px] border-l-green-600'
-                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                      ? 'bg-[var(--color-primary-500)]/10 text-[var(--color-primary-600)] border-l-[3px] border-l-[var(--color-primary-600)]'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] border-l-[3px] border-l-transparent'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-green-700' : ''}`} />
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[var(--color-primary-600)]' : ''}`} />
                   <span className="leading-tight">{tab.label}</span>
                 </button>
               );
             })}
-          </div>
+          </Card>
 
           {/* Branding link */}
-          <div className="mt-3 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <Card padding="none" className="overflow-hidden">
             <a
               href="/admin/settings/branding"
-              className="flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-all"
+              className="flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)] transition-all"
             >
               <span className="text-base">🎨</span>
               <span>Branding</span>
-              <span className="ml-auto text-[9px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded font-black uppercase">Page</span>
+              <span className="ml-auto text-[9px] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border border-[var(--border-subtle)] px-1.5 py-0.5 rounded font-black uppercase">Page</span>
             </a>
-          </div>
+          </Card>
         </aside>
 
         {/* Content */}
@@ -155,7 +145,12 @@ export default function SystemSettingsPage() {
             />
           )}
           {active === 'payment' && (
-            <PaymentTab data={config.payment} onChange={d => update('payment', d)} />
+            <PaymentTab 
+              data={config.payment} 
+              pricing={config.pricing} 
+              onChange={d => update('payment', d)} 
+              onPricing={d => update('pricing', d)}
+            />
           )}
           {active === 'fleet' && (
             <FleetTab

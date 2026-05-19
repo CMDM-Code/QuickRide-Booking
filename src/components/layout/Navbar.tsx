@@ -43,25 +43,25 @@ export default function Navbar() {
                 className="w-full h-full object-contain"
               />
             </div>
-            <span className="text-xl font-bold text-slate-900 tracking-tight">
+            <span className="text-xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
               {branding.system_name}
             </span>
           </Link>
 
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-slate-700 hover:text-green-700 transition-colors font-medium">
+            <Link href="/" className="transition-colors font-medium" style={{ color: "var(--text-secondary)" }}>
               Home
             </Link>
-            <Link href="/about-us" className="text-slate-700 hover:text-green-700 transition-colors font-medium">
+            <Link href="/about-us" className="transition-colors font-medium" style={{ color: "var(--text-secondary)" }}>
               About Us
             </Link>
-            <Link href="/services" className="text-slate-700 hover:text-green-700 transition-colors font-medium">
+            <Link href="/services" className="transition-colors font-medium" style={{ color: "var(--text-secondary)" }}>
               Services
             </Link>
-            <Link href="/fleet" className="text-slate-700 hover:text-green-700 transition-colors font-medium">
+            <Link href="/fleet" className="transition-colors font-medium" style={{ color: "var(--text-secondary)" }}>
               Fleet
             </Link>
-            <Link href="/price-rates" className="text-slate-700 hover:text-green-700 transition-colors font-medium">
+            <Link href="/price-rates" className="transition-colors font-medium" style={{ color: "var(--text-secondary)" }}>
               Rates
             </Link>
 
@@ -71,33 +71,39 @@ export default function Navbar() {
                 <div className="relative">
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center gap-2.5 bg-slate-100 hover:bg-slate-200 text-slate-900 px-5 py-2 rounded-full text-sm font-bold border border-slate-200 transition-all active:scale-95 group"
+                    className="flex items-center gap-2.5 px-5 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 group"
+                    style={{ backgroundColor: "var(--bg-subtle)", color: "var(--text-primary)", borderColor: "var(--border-default)" }}
                   >
-                    <div className="w-6 h-6 rounded-full bg-green-700 flex items-center justify-center text-[10px] text-white">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white"
+                      style={{ backgroundColor: "var(--color-primary)" }}>
                       {userName?.charAt(0) || "U"}
                     </div>
                     <span>{userName}</span>
-                    <svg className={`w-4 h-4 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                      style={{ color: "var(--text-muted)" }}>
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
 
                   {isDropdownOpen && (
-                    <div className="absolute right-0 mt-3 w-56 bg-slate-800/90 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl py-2 z-10 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-slate-100 mb-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Account</p>
-                        <p className="text-sm font-bold text-slate-900 truncate">{userName}</p>
+                    <div className="absolute right-0 mt-3 w-56 backdrop-blur-xl border rounded-2xl shadow-2xl py-2 z-10 animate-in fade-in zoom-in-95 duration-200 overflow-hidden"
+                      style={{ backgroundColor: "rgba(15,23,42,0.9)", borderColor: "var(--border-default)" }}>
+                      <div className="px-4 py-3 border-b mb-1" style={{ borderColor: "var(--border-subtle)" }}>
+                        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Active Account</p>
+                        <p className="text-sm font-bold truncate" style={{ color: "var(--text-primary)" }}>{userName}</p>
                       </div>
                       <Link 
                         href="/dashboard" 
                         onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-green-50 hover:text-green-800 transition-colors"
+                        className="flex items-center gap-3 px-4 py-3 text-sm font-bold transition-colors"
+                        style={{ color: "var(--text-secondary)" }}
                       >
                         View Dashboard
                       </Link>
                       <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 w-full px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors text-left"
+                        className="flex items-center gap-3 w-full px-4 py-3 text-sm font-bold transition-colors text-left"
+                        style={{ color: "var(--error)" }}
                       >
                         Logout
                       </button>
@@ -107,10 +113,11 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="flex items-center space-x-4">
-                <Link href="/auth/login" className="text-slate-700 hover:text-green-700 transition-colors font-medium">
+                <Link href="/auth/login" className="transition-colors font-medium" style={{ color: "var(--text-secondary)" }}>
                   Login
                 </Link>
-                <Link href="/auth/signup" className="bg-green-700 text-white px-6 py-2.5 rounded-full hover:bg-green-800 transition-all transform hover:scale-105 shadow-lg shadow-green-700/25 font-bold">
+                <Link href="/auth/signup" className="text-white px-6 py-2.5 rounded-full transition-all transform hover:scale-105 shadow-lg font-bold"
+                  style={{ backgroundColor: "var(--color-primary)", boxShadow: "0 10px 15px -3px rgba(21,128,61,0.25)" }}>
                   Sign Up
                 </Link>
               </div>
@@ -118,7 +125,8 @@ export default function Navbar() {
           </div>
 
           <button 
-            className="md:hidden text-slate-700 p-2 hover:bg-slate-100 rounded-xl transition-colors"
+            className="md:hidden p-2 rounded-xl transition-colors"
+            style={{ color: "var(--text-secondary)" }}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,45 +140,47 @@ export default function Navbar() {
         </div>
 
         {isMobileMenuOpen && (
-          <div className="md:hidden py-6 space-y-2 border-t border-slate-100 animate-in slide-in-from-top-4 duration-300">
-            <Link href="/" className="block text-slate-700 hover:text-green-700 transition-colors font-bold px-4 py-3 rounded-2xl hover:bg-slate-50">
+          <div className="md:hidden py-6 space-y-2 border-t animate-in slide-in-from-top-4 duration-300"
+            style={{ borderColor: "var(--border-subtle)" }}>
+            <Link href="/" className="block transition-colors font-bold px-4 py-3 rounded-2xl" style={{ color: "var(--text-secondary)" }}>
               Home
             </Link>
-            <Link href="/about-us" className="block text-slate-700 hover:text-green-700 transition-colors font-bold px-4 py-3 rounded-2xl hover:bg-slate-50">
+            <Link href="/about-us" className="block transition-colors font-bold px-4 py-3 rounded-2xl" style={{ color: "var(--text-secondary)" }}>
               About Us
             </Link>
-            <Link href="/services" className="block text-slate-700 hover:text-green-700 transition-colors font-bold px-4 py-3 rounded-2xl hover:bg-slate-50">
+            <Link href="/services" className="block transition-colors font-bold px-4 py-3 rounded-2xl" style={{ color: "var(--text-secondary)" }}>
               Services
             </Link>
-            <Link href="/fleet" className="block text-slate-700 hover:text-green-700 transition-colors font-bold px-4 py-3 rounded-2xl hover:bg-slate-50">
+            <Link href="/fleet" className="block transition-colors font-bold px-4 py-3 rounded-2xl" style={{ color: "var(--text-secondary)" }}>
               Fleet
             </Link>
-            <Link href="/price-rates" className="block text-slate-700 hover:text-green-700 transition-colors font-bold px-4 py-3 rounded-2xl hover:bg-slate-50">
+            <Link href="/price-rates" className="block transition-colors font-bold px-4 py-3 rounded-2xl" style={{ color: "var(--text-secondary)" }}>
               Rates
             </Link>
 
             {isAuthenticated ? (
-              <div className="pt-4 border-t border-slate-100 mt-4 px-4 space-y-4">
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Authenticated Account</p>
-                  <p className="text-slate-900 font-bold">{userName}</p>
+              <div className="pt-4 border-t mt-4 px-4 space-y-4" style={{ borderColor: "var(--border-subtle)" }}>
+                <div className="p-4 rounded-2xl border" style={{ backgroundColor: "var(--bg-subtle)", borderColor: "var(--border-subtle)" }}>
+                  <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: "var(--text-muted)" }}>Authenticated Account</p>
+                  <p className="font-bold" style={{ color: "var(--text-primary)" }}>{userName}</p>
                 </div>
-                <Link href="/dashboard" className="block w-full py-4 text-center text-slate-900 font-black border-2 border-slate-200 rounded-2xl hover:bg-slate-50 transition-all">
+                <Link href="/dashboard" className="block w-full py-4 text-center font-black border-2 rounded-2xl transition-all" style={{ color: "var(--text-primary)", borderColor: "var(--border-default)" }}>
                   Dashboard
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="block w-full py-4 text-center text-red-600 font-black bg-red-50 rounded-2xl hover:bg-red-100 transition-all"
+                  className="block w-full py-4 text-center font-black rounded-2xl transition-all"
+                  style={{ color: "var(--error)", backgroundColor: "var(--error-bg)" }}
                 >
                   Logout
                 </button>
               </div>
             ) : (
               <div className="pt-4 flex flex-col gap-3 px-4">
-                <Link href="/auth/login" className="block w-full py-4 text-center text-slate-700 font-bold border-2 border-slate-200 rounded-2xl">
+                <Link href="/auth/login" className="block w-full py-4 text-center font-bold border-2 rounded-2xl" style={{ color: "var(--text-secondary)", borderColor: "var(--border-default)" }}>
                   Login
                 </Link>
-                <Link href="/auth/signup" className="block w-full py-4 text-center text-white font-bold bg-green-700 rounded-2xl shadow-lg shadow-green-700/20">
+                <Link href="/auth/signup" className="block w-full py-4 text-center text-white font-bold rounded-2xl shadow-lg" style={{ backgroundColor: "var(--color-primary)", boxShadow: "0 10px 15px -3px rgba(21,128,61,0.2)" }}>
                   Sign Up
                 </Link>
               </div>

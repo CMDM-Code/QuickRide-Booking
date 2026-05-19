@@ -84,28 +84,28 @@ export default function SystemTab({ system, notifications, onSystem, onNotificat
       </Section>
 
       {/* ── Role Permissions Info Card (A8) ── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-        <div className="flex items-center gap-3 pb-4 border-b border-slate-100 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-            <ShieldCheck className="w-4 h-4 text-blue-600" />
+      <div className="bg-[var(--bg-primary)] rounded-2xl border border-[var(--border-subtle)] shadow-[var(--shadow-premium)] p-6">
+        <div className="flex items-center gap-3 pb-4 border-b border-[var(--border-subtle)] mb-4">
+          <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-500)]/10 flex items-center justify-center">
+            <ShieldCheck className="w-4 h-4 text-[var(--color-primary-600)]" />
           </div>
           <div>
-            <h2 className="text-base font-black text-slate-900">Role Permissions</h2>
-            <p className="text-xs text-slate-400 font-medium">Fixed system roles — not configurable</p>
+            <h2 className="text-base font-black text-[var(--text-primary)]">Role Permissions</h2>
+            <p className="text-xs text-[var(--text-secondary)] font-medium">Fixed system roles — not configurable</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {(Object.entries(ROLE_DEFINITIONS) as [string, typeof ROLE_DEFINITIONS['admin']][]).map(([roleKey, role]) => (
-            <div key={roleKey} className="rounded-xl border border-slate-100 p-4 space-y-2">
+            <div key={roleKey} className="rounded-xl border border-[var(--border-subtle)] p-4 space-y-2 bg-[var(--bg-secondary)]">
               <div className="flex items-center gap-2 mb-3">
-                <Users className="w-4 h-4 text-slate-500" />
-                <p className="font-black text-sm text-slate-800">{role.label}</p>
+                <Users className="w-4 h-4 text-[var(--text-tertiary)]" />
+                <p className="font-black text-sm text-[var(--text-primary)]">{role.label}</p>
               </div>
               <div className="space-y-1">
                 {(Object.entries(role.permissions) as [string, boolean][]).map(([perm, allowed]) => (
                   <div key={perm} className="flex items-center gap-2 text-xs">
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${allowed ? 'bg-green-500' : 'bg-slate-200'}`} />
-                    <span className={allowed ? 'text-slate-700 font-medium' : 'text-slate-400'}>
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${allowed ? 'bg-[var(--color-success)]' : 'bg-[var(--bg-tertiary)] border border-[var(--border-subtle)]'}`} />
+                    <span className={allowed ? 'text-[var(--text-secondary)] font-medium' : 'text-[var(--text-tertiary)]'}>
                       {perm.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}
                     </span>
                   </div>
@@ -119,7 +119,7 @@ export default function SystemTab({ system, notifications, onSystem, onNotificat
       {/* ── Advanced ── */}
       <button
         onClick={() => setShowAdvanced(v => !v)}
-        className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors pt-1"
+        className="flex items-center gap-2 text-xs font-bold text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors pt-1"
       >
         {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         {showAdvanced ? 'Hide Advanced Settings' : 'Show Advanced Settings'}

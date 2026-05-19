@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import StaffLayout from "../layout";
 import { authClient } from "@/lib/auth-client";
 import { fetchAssignedBookings } from "@/lib/staff-service";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { toSafeDate } from "@/lib/api-utils";
 import { Booking } from "@/lib/types";
 import { 
   Calendar, 
@@ -49,18 +49,15 @@ export default function StaffBookingsPage() {
 
   if (loading) {
     return (
-      <StaffLayout>
-        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
-          <p className="text-slate-500 font-medium">Loading assigned tasks...</p>
-        </div>
-      </StaffLayout>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+        <p className="text-slate-500 font-medium">Loading assigned tasks...</p>
+      </div>
     );
   }
 
   return (
-    <StaffLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight">My Assignments</h1>
           <p className="text-slate-500 font-medium mt-1">Manage and update bookings specifically assigned to you.</p>
@@ -125,7 +122,7 @@ export default function StaffBookingsPage() {
                         <div>
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Rental Period</p>
                           <p className="font-bold text-slate-900">
-                            {new Date(booking.start_date).toLocaleDateString()} - {new Date(booking.end_date).toLocaleDateString()}
+                            {toSafeDate(booking.start_date)?.toLocaleDateString() || 'N/A'} - {toSafeDate(booking.end_date)?.toLocaleDateString() || 'N/A'}
                           </p>
                         </div>
                       </div>
@@ -197,6 +194,5 @@ export default function StaffBookingsPage() {
           </div>
         )}
       </div>
-    </StaffLayout>
   );
 }

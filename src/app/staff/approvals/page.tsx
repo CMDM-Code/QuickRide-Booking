@@ -1,9 +1,9 @@
 'use client';
 
-import StaffLayout from "../layout";
 import { useEffect, useState } from "react";
 import { getAllBookings, updateBookingStatus, type FirestoreBooking } from "@/lib/booking-service";
 import { staffAuth } from "@/lib/staff-auth";
+import { toSafeDate } from "@/lib/api-utils";
 
 export default function ApprovalsPage() {
   const [pendingBookings, setPendingBookings] = useState<FirestoreBooking[]>([]);
@@ -46,8 +46,7 @@ export default function ApprovalsPage() {
   };
 
   return (
-    <StaffLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Booking Approvals</h1>
           <p className="text-slate-600 mt-1">Review and approve pending booking requests</p>
@@ -71,7 +70,7 @@ export default function ApprovalsPage() {
                     </div>
                     <p className="text-slate-600 mt-1">User: {booking.user_id}</p>
                     <p className="text-slate-500 text-sm mt-1">
-                      Vehicle: {booking.car_id} • {new Date(booking.start_date).toLocaleDateString()} - {new Date(booking.end_date).toLocaleDateString()}
+                      Vehicle: {booking.car_id} • {toSafeDate(booking.start_date)?.toLocaleDateString() || 'N/A'} - {toSafeDate(booking.end_date)?.toLocaleDateString() || 'N/A'}
                     </p>
                     <p className="text-green-700 font-bold mt-2">₱{booking.total_price.toLocaleString()}</p>
                   </div>
@@ -89,6 +88,5 @@ export default function ApprovalsPage() {
           </div>
         )}
       </div>
-    </StaffLayout>
   );
 }

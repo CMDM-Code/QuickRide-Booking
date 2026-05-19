@@ -4,7 +4,7 @@ import logo from "@/assets/images/quickride_logo.png";
 
 const Footer = () => {
   return (
-    <footer className="bg-slate-900 text-white py-16 px-4 sm:px-6 lg:px-8">
+    <footer className="py-16 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--bg-inverse)", color: "var(--text-inverse)" }}>
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="md:col-span-2">
@@ -20,14 +20,15 @@ const Footer = () => {
                 QuickRide Booking
               </span>
             </div>
-            <p className="text-slate-400 max-w-md leading-relaxed mb-6">
+            <p className="max-w-md leading-relaxed mb-6" style={{ color: "var(--text-muted)" }}>
               Premium car rental service committed to providing luxury vehicles
               and exceptional customer experience. Your journey, our priority.
             </p>
             <div className="flex space-x-4">
               <a
                 href="#"
-                className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-green-700 transition-colors"
+                className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors"
+                style={{ backgroundColor: "var(--bg-button)" }}
               >
                 <svg
                   className="w-5 h-5"
@@ -39,7 +40,8 @@ const Footer = () => {
               </a>
               <a
                 href="#"
-                className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-green-700 transition-colors"
+                className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors"
+                style={{ backgroundColor: "var(--bg-button)" }}
               >
                 <svg
                   className="w-5 h-5"
@@ -51,7 +53,8 @@ const Footer = () => {
               </a>
               <a
                 href="#"
-                className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center hover:bg-green-700 transition-colors"
+                className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors"
+                style={{ backgroundColor: "var(--bg-button)" }}
               >
                 <svg
                   className="w-5 h-5"
@@ -68,22 +71,22 @@ const Footer = () => {
             <h4 className="text-lg font-bold mb-6">Quick Links</h4>
             <ul className="space-y-3">
               <li>
-                <a href="#fleet" className="text-slate-400 hover:text-green-400 transition-colors">
+                <a href="#fleet" className="transition-colors" style={{ color: "var(--text-muted)" }}>
                   Our Fleet
                 </a>
               </li>
               <li>
-                <a href="#pricing" className="text-slate-400 hover:text-green-400 transition-colors">
+                <a href="#pricing" className="transition-colors" style={{ color: "var(--text-muted)" }}>
                   Rental Rates
                 </a>
               </li>
               <li>
-                <a href="#policy" className="text-slate-400 hover:text-green-400 transition-colors">
+                <a href="#policy" className="transition-colors" style={{ color: "var(--text-muted)" }}>
                   Policies
                 </a>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-green-400 transition-colors">
+                <a href="#" className="transition-colors" style={{ color: "var(--text-muted)" }}>
                   Contact
                 </a>
               </li>
@@ -95,7 +98,8 @@ const Footer = () => {
             <ul className="space-y-4">
               <li className="flex items-start space-x-3">
                 <svg
-                  className="w-5 h-5 text-green-500 mr-3 mt-0.5"
+                  className="w-5 h-5 mr-3 mt-0.5"
+                  style={{ color: "var(--success)" }}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -113,13 +117,14 @@ const Footer = () => {
                     d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                <span className="text-slate-400">
+                <span style={{ color: "var(--text-muted)" }}>
                   123 Premium Avenue, Luxury District
                 </span>
               </li>
               <li className="flex items-start space-x-3">
                 <svg
-                  className="w-5 h-5 text-green-500 mr-3 mt-0.5"
+                  className="w-5 h-5 mr-3 mt-0.5"
+                  style={{ color: "var(--success)" }}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -131,11 +136,12 @@ const Footer = () => {
                     d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                   />
                 </svg>
-                <span className="text-slate-400">+1 (555) 123-4567</span>
+                <span style={{ color: "var(--text-muted)" }}>+1 (555) 123-4567</span>
               </li>
               <li className="flex items-start space-x-3">
                 <svg
-                  className="w-5 h-5 text-green-500 mr-3 mt-0.5"
+                  className="w-5 h-5 mr-3 mt-0.5"
+                  style={{ color: "var(--success)" }}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -147,13 +153,13 @@ const Footer = () => {
                     d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                   />
                 </svg>
-                <span className="text-slate-400">book@quickridebooking.com</span>
+                <span style={{ color: "var(--text-muted)" }}>book@quickridebooking.com</span>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-slate-800 mt-12 pt-8 text-center text-slate-400">
+        <div className="border-t mt-12 pt-8 text-center" style={{ borderColor: "rgba(255,255,255,0.1)", color: "var(--text-muted)" }}>
           <p>&copy; {new Date().getFullYear()} QuickRide Booking Automotive Group.</p>
         </div>
       </div>

@@ -1,9 +1,9 @@
 'use client';
 
-import StaffLayout from "../layout";
 import { useEffect, useState } from "react";
 import { getAllBookings, patchBooking, type FirestoreBooking } from "@/lib/booking-service";
 import { getAllVehicles, updateVehicleStatus, type Vehicle } from "@/lib/vehicle-service";
+import { toSafeDate } from "@/lib/api-utils";
 
 export default function AssignVehiclePage() {
   const [confirmedBookings, setConfirmedBookings] = useState<FirestoreBooking[]>([]);
@@ -63,8 +63,7 @@ export default function AssignVehiclePage() {
   };
 
   return (
-    <StaffLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Assign Vehicle</h1>
           <p className="text-slate-600 mt-1">Assign physical vehicles to confirmed bookings</p>
@@ -94,7 +93,7 @@ export default function AssignVehiclePage() {
                     <div className="font-bold text-slate-900">{booking.id}</div>
                     <div className="text-sm text-slate-600">{booking.profile?.name || 'Customer'}</div>
                     <div className="text-sm text-slate-500">
-                      {new Date(booking.start_date).toLocaleDateString()} - {new Date(booking.end_date).toLocaleDateString()}
+                      {toSafeDate(booking.start_date)?.toLocaleDateString() || 'N/A'} - {toSafeDate(booking.end_date)?.toLocaleDateString() || 'N/A'}
                     </div>
                   </div>
                 ))}
@@ -131,6 +130,5 @@ export default function AssignVehiclePage() {
           </div>
         )}
       </div>
-    </StaffLayout>
   );
 }

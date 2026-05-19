@@ -17,6 +17,7 @@ import {
 import { db } from './firebase';
 import { Chat, Message } from './types';
 import { createNotification } from './notification-service';
+import { getFullConfig } from './settings-service';
 
 const CHATS_COLLECTION = 'chats';
 
@@ -58,7 +59,8 @@ export async function sendMessage(
   chatId: string,
   senderId: string,
   senderName: string,
-  content: string
+  content: string,
+  senderRole: 'customer' | 'support' = 'customer'
 ) {
   try {
     const messagesRef = collection(db, CHATS_COLLECTION, chatId, 'messages');
@@ -68,6 +70,7 @@ export async function sendMessage(
     await addDoc(messagesRef, {
       sender_id: senderId,
       sender_name: senderName,
+      sender_role: senderRole,
       content,
       created_at: serverTimestamp(),
     });
@@ -135,8 +138,22 @@ export function getUnreadCount(chatData: Record<string, any>, userId: string): n
 }
 
 /**
+ * Returns the retention cutoff date based on settings.
+ * Default: 90 days. Uses chat_retention_policy or chat_retention_days if available.
+ */
+function getRetentionCutoff(): Date {
+  const cfg = getFullConfig();
+  const policy = cfg.system.chat_retention_policy || '90 days';
+  const days = parseInt(policy, 10) || 90;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  return cutoff;
+}
+
+/**
  * Subscribes to messages in a chat (real-time).
  * A6: Messages no longer have read_by field.
+ * B5.4: Filters out messages older than retention window.
  */
 export function subscribeToMessages(chatId: string, callback: (messages: Message[]) => void) {
   const q = query(
@@ -145,13 +162,16 @@ export function subscribeToMessages(chatId: string, callback: (messages: Message
   );
 
   return onSnapshot(q, snapshot => {
-    const messages = snapshot.docs.map(d => ({
-      id: d.id,
-      ...d.data(),
-      created_at:
-        (d.data().created_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
-      read_by: [], // backward compat shim — A6 uses unread_counts on chat doc instead
-    })) as Message[];
+    const cutoff = getRetentionCutoff();
+    const messages = snapshot.docs
+      .map(d => ({
+        id: d.id,
+        ...d.data(),
+        created_at:
+          (d.data().created_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+        read_by: [], // backward compat shim — A6 uses unread_counts on chat doc instead
+      }))
+      .filter(m => new Date(m.created_at) >= cutoff) as Message[];
     callback(messages);
   });
 }

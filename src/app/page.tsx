@@ -14,6 +14,8 @@ import { withTimeout } from "@/lib/api-utils";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { ChevronRight, MapPin, Clock } from "lucide-react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { MagneticButton } from "@/components/ui/MagneticButton";
 
 export default function Home() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -74,11 +76,23 @@ export default function Home() {
           carTypesSnap.docs.map((d: any) => [d.id, d.data()])
       );
 
-      const data = vehsSnap.docs.map((d: any) => ({
-        id: d.id,
-        ...d.data(),
-        car_type: carTypesMap[d.data().car_type_id] || { name: 'Standard', driver_only: false }
-      } as Vehicle));
+      const data = vehsSnap.docs.map((d: any) => {
+        const vehicleData = d.data();
+        const carTypeId = vehicleData.car_type_id;
+        let carType = carTypesMap[carTypeId];
+        
+        // If not found in car_types collection, extract name from car_type_id
+        if (!carType && carTypeId) {
+          const typeName = carTypeId.replace('type_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          carType = { name: typeName, driver_only: false };
+        }
+        
+        return {
+          id: d.id,
+          ...vehicleData,
+          car_type: carType || { name: 'Standard', driver_only: false }
+        } as Vehicle;
+      });
 
       setVehicles(data);
     } catch (error) {
@@ -87,6 +101,9 @@ export default function Home() {
       setLoading(false);
     }
   }
+
+  const { scrollY } = useScroll();
+  const y1 = useTransform(scrollY, [0, 500], [0, 200]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -99,22 +116,28 @@ export default function Home() {
       {/* Modern Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden bg-slate-900 min-h-[90vh] flex items-center">
         {/* Background Layer */}
-        <div className="absolute inset-0 z-0">
+        <motion.div style={{ y: y1 }} className="absolute inset-0 z-0">
           <Image
             src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1920&q=80"
             alt="Luxury Car"
             fill
+            sizes="100vw"
             className="object-cover opacity-40"
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-tr from-slate-900 via-slate-900/80 to-transparent"></div>
-        </div>
+        </motion.div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="grid lg:grid-cols-12 gap-12 items-center">
             
             {/* Left Content */}
-            <div className="lg:col-span-7 space-y-8">
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="lg:col-span-7 space-y-8"
+            >
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                  <span className="text-[10px] font-bold uppercase tracking-widest text-green-500">Now Accepting Bookings</span>
@@ -131,18 +154,21 @@ export default function Home() {
               </p>
 
               <div className="flex flex-wrap gap-4 pt-4">
-                <button 
-                  onClick={handleOpenBooking}
-                  className="px-8 py-4 bg-green-500 hover:bg-green-400 text-slate-900 font-bold rounded-2xl transition-all shadow-xl shadow-green-500/20 flex items-center gap-2 group"
-                >
-                  Book Now <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-                <button 
-                  onClick={() => document.getElementById('fleet')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl border border-white/10 transition-all backdrop-blur-md"
-                >
-                  View Fleet
-                </button>
+                <MagneticButton onClick={handleOpenBooking}>
+                  <button 
+                    className="px-8 py-4 bg-green-500 hover:bg-green-400 text-slate-900 font-bold rounded-2xl transition-all shadow-xl shadow-green-500/20 flex items-center gap-2 group"
+                  >
+                    Book Now <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </MagneticButton>
+                
+                <MagneticButton onClick={() => document.getElementById('fleet')?.scrollIntoView({ behavior: 'smooth' })}>
+                  <button 
+                    className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl border border-white/10 transition-all backdrop-blur-md"
+                  >
+                    View Fleet
+                  </button>
+                </MagneticButton>
               </div>
 
               <div className="flex items-center gap-6 text-slate-400 text-xs font-bold pt-4 uppercase tracking-widest">
@@ -150,10 +176,15 @@ export default function Home() {
                 <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full border-2 border-green-500"></div> Fully Insured Vehicles</span>
                 <span className="flex items-center gap-2"><Clock size={14} className="text-green-500" /> 24/7 Support</span>
               </div>
-            </div>
+            </motion.div>
 
             {/* Right Interactive/Decorative Section */}
-            <div className="hidden lg:flex lg:col-span-5 flex-col gap-4">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+              className="hidden lg:flex lg:col-span-5 flex-col gap-4"
+            >
               
               {/* Quick Overview Card */}
               <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-6 shadow-2xl">
@@ -217,7 +248,7 @@ export default function Home() {
                 <ChevronRight size={22} className="text-green-300 group-hover:translate-x-1 transition-transform" />
               </button>
 
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -237,9 +268,23 @@ export default function Home() {
             </p>
           </div>
 
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-             {vehicles.map((car) => (
-               <VehicleCard key={car.id} car={car} />
+           <motion.div 
+             initial={{ opacity: 0, y: 20 }}
+             whileInView={{ opacity: 1, y: 0 }}
+             viewport={{ once: true }}
+             transition={{ duration: 0.6 }}
+             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+           >
+             {vehicles.map((car, idx) => (
+               <motion.div
+                 key={car.id}
+                 initial={{ opacity: 0, y: 20 }}
+                 whileInView={{ opacity: 1, y: 0 }}
+                 viewport={{ once: true }}
+                 transition={{ duration: 0.5, delay: idx * 0.1 }}
+               >
+                 <VehicleCard car={car} />
+               </motion.div>
              ))}
              {loading && (
                 <div className="col-span-full text-center py-12">
@@ -254,7 +299,7 @@ export default function Home() {
                  No vehicles available at this time.
                </div>
              )}
-           </div>
+           </motion.div>
         </div>
       </section>
 

@@ -1,5 +1,33 @@
 @import "tailwindcss";
-@import "leaflet/dist/leaflet.css";
+
+/* Figma UI Custom Utilities & Tokens */
+@theme {
+  --shadow-premium: 0 15px 30px -5px rgba(15, 23, 42, 0.12), 0 10px 15px -5px rgba(15, 23, 42, 0.08);
+  --shadow-elite: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-3xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  --radius-2xl-plus: 1.5rem;
+  --radius-3xl-plus: 2rem;
+}
+
+@utility rounded-2xl-plus {
+  border-radius: var(--radius-2xl-plus);
+}
+
+@utility rounded-3xl-plus {
+  border-radius: var(--radius-3xl-plus);
+}
+
+@utility shadow-premium {
+  box-shadow: var(--shadow-premium);
+}
+
+@utility shadow-elite {
+  box-shadow: var(--shadow-elite);
+}
+
+@utility shadow-3xl {
+  box-shadow: var(--shadow-3xl);
+}
 
 @layer base {
   :root {
@@ -17,14 +45,35 @@
     --muted-foreground: var(--text-tertiary, #64748b);
     --border: var(--border-subtle, #f1f5f9);
     --radius: 0.75rem;
-    --font-heading: var(--font-manrope), sans-serif;
-    --font-body: var(--font-inter), sans-serif;
+    --font-heading: var(--font-inter), system-ui, sans-serif;
+    --font-body: var(--font-inter), system-ui, sans-serif;
+    --bg-surface: var(--bg-secondary, #ffffff);
+    --bg-subtle: var(--bg-tertiary, #f1f5f9);
   }
 
   html {
     font-family: var(--font-inter), system-ui, sans-serif;
     background-color: var(--background);
     color: var(--foreground);
+    scroll-behavior: smooth;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-default);
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-strong);
   }
 
   body {
@@ -38,7 +87,7 @@
   h4,
   h5,
   h6 {
-    font-family: var(--font-manrope), sans-serif;
+    font-family: var(--font-inter), system-ui, sans-serif;
   }
 }
 
@@ -125,26 +174,7 @@
     color: var(--text-secondary, #475569);
   }
 
-  /* Figma UI Custom Utilities */
-  .rounded-2xl-plus {
-    border-radius: 1.5rem;
-  }
 
-  .rounded-3xl-plus {
-    border-radius: 2rem;
-  }
-
-  .shadow-premium {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
-  }
-
-  .shadow-elite {
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  }
-
-  .shadow-3xl {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-  }
 
   .glass-effect {
     @apply bg-slate-800/70 backdrop-blur-xl border border-white/40 shadow-sm;
@@ -170,6 +200,42 @@
   .payment-input::placeholder {
     color: var(--text-muted);
     font-weight: 400;
+  }
+
+  .glass-panel {
+    @apply backdrop-blur-xl border shadow-premium;
+    background-color: var(--glass-bg);
+    border-color: var(--glass-border);
+  }
+
+  .dark .glass-panel {
+    background-color: var(--glass-bg-dark);
+    border-color: var(--glass-border-dark);
+  }
+
+  .frost-panel {
+    @apply backdrop-blur-md border shadow-premium;
+    background-color: var(--frost-bg);
+    border-color: var(--frost-border);
+  }
+
+  .dark .frost-panel {
+    background-color: var(--frost-bg-dark);
+    border-color: var(--frost-border-dark);
+  }
+
+  .noise-bg {
+    position: relative;
+  }
+
+  .noise-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.03;
+    pointer-events: none;
+    background-image: url("https://www.transparenttextures.com/patterns/pinstriped-suit.png");
   }
 }
 

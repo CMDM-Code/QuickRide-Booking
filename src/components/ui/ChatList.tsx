@@ -34,9 +34,9 @@ export default function ChatList({ onChatSelect, selectedChatId }: ChatListProps
   );
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-slate-100 bg-slate-50/30">
-        <h3 className="text-xl font-black text-slate-900 mb-4">Messages</h3>
+    <div className="flex flex-col h-full bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+      <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-700/30">
+        <h3 className="text-xl font-black text-slate-900 dark:text-white mb-4">Messages</h3>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -44,7 +44,7 @@ export default function ChatList({ onChatSelect, selectedChatId }: ChatListProps
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search conversations..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white font-medium text-xs text-slate-700 outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 font-medium text-xs text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all"
           />
         </div>
       </div>
@@ -52,10 +52,10 @@ export default function ChatList({ onChatSelect, selectedChatId }: ChatListProps
       <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
         {filteredChats.length === 0 ? (
           <div className="py-20 text-center">
-            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Inbox className="w-8 h-8 text-slate-200" />
+            <div className="w-16 h-16 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Inbox className="w-8 h-8 text-slate-200 dark:text-slate-400" />
             </div>
-            <h4 className="text-sm font-bold text-slate-900 mb-1">No messages found</h4>
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">No messages found</h4>
             <p className="text-[10px] text-slate-400 font-medium px-8">Conversations will appear here once customers reach out.</p>
           </div>
         ) : (
@@ -65,12 +65,12 @@ export default function ChatList({ onChatSelect, selectedChatId }: ChatListProps
               onClick={() => onChatSelect(chat.id)}
               className={`w-full p-4 flex gap-4 rounded-2xl transition-all text-left ${
                 selectedChatId === chat.id 
-                  ? 'bg-slate-950 text-white shadow-xl shadow-slate-950/20' 
-                  : 'hover:bg-slate-50 text-slate-900'
+                  ? 'bg-slate-950 dark:bg-slate-700 text-white shadow-xl shadow-slate-950/20' 
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100'
               }`}
             >
               <div className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${
-                selectedChatId === chat.id ? 'bg-white/10' : 'bg-slate-100'
+                selectedChatId === chat.id ? 'bg-white/10' : 'bg-slate-100 dark:bg-slate-600'
               }`}>
                 <MessageSquare className={`w-6 h-6 ${
                   selectedChatId === chat.id ? 'text-white' : 'text-slate-400'

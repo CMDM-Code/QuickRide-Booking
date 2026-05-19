@@ -130,7 +130,8 @@ const AdminSidebar = () => {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-6 left-6 z-[100] lg:hidden bg-slate-900 text-white p-3 rounded-xl shadow-xl hover:bg-black transition-all"
+        className="fixed top-6 left-6 z-[100] lg:hidden text-white p-3 rounded-xl shadow-xl transition-all"
+        style={{ backgroundColor: "var(--sidebar-bg)" }}
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {isOpen ? (
@@ -143,16 +144,19 @@ const AdminSidebar = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-20 bottom-0 left-0 z-40 bg-slate-950 shadow-2xl transform transition-all duration-300 ease-in-out border-r border-white/5
+        className={`fixed top-20 bottom-0 left-0 z-40 shadow-2xl transform transition-all duration-300 ease-in-out border-r
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
           ${isCollapsed ? "w-20" : "w-72"}
         `}
+        style={{ backgroundColor: "var(--sidebar-bg)", borderColor: "var(--text-muted)" }}
       >
         <div className="flex flex-col h-full overflow-hidden">
           {/* Brand Header */}
-          <div className={`p-6 border-b border-white/5 transition-all duration-300 ${isCollapsed ? 'items-center justify-center' : ''}`}>
+          <div className={`p-6 border-b transition-all duration-300 ${isCollapsed ? 'items-center justify-center' : ''}`}
+            style={{ borderColor: "var(--text-muted)" }}>
             <div className={`flex items-center space-x-3 ${isCollapsed ? 'justify-center' : ''}`}>
-              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 shadow-lg shadow-green-900/20 bg-white p-1">
+              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 shadow-lg bg-white p-1"
+                style={{ boxShadow: "0 10px 15px -3px rgba(21,128,61,0.2)" }}>
                 <img 
                   src={branding.logo_url} 
                   alt={branding.system_name} 
@@ -161,8 +165,8 @@ const AdminSidebar = () => {
               </div>
               {!isCollapsed && (
                 <div className="animate-in fade-in slide-in-from-left-2 duration-300">
-                  <span className="text-lg font-black text-white tracking-tighter block leading-none">{branding.system_name}</span>
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-green-500">Admin Control</span>
+                  <span className="text-lg font-black tracking-tighter block leading-none" style={{ color: "var(--sidebar-text-active)" }}>{branding.system_name}</span>
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: "var(--color-primary)" }}>Admin Control</span>
                 </div>
               )}
             </div>
@@ -177,10 +181,10 @@ const AdminSidebar = () => {
                     onClick={() => toggleGroup(group.name)}
                     className="w-full flex items-center justify-between px-2 mb-2 group"
                   >
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 group-hover:text-slate-300 transition-colors">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] transition-colors" style={{ color: "var(--text-muted)" }}>
                       {group.name}
                     </span>
-                    <ChevronDown className={`w-3 h-3 text-slate-600 transition-transform ${expandedGroups[group.name] ? '' : '-rotate-90'}`} />
+                    <ChevronDown className={`w-3 h-3 transition-transform ${expandedGroups[group.name] ? '' : '-rotate-90'}`} style={{ color: "var(--text-secondary)" }} />
                   </button>
                 )}
                 
@@ -199,21 +203,28 @@ const AdminSidebar = () => {
                             isCollapsed ? 'justify-center p-3' : 'px-4 py-2.5 space-x-3'
                           } ${
                             isActive
-                              ? "bg-green-600/10 text-green-500 border border-green-500/20"
-                              : "text-slate-400 hover:text-white hover:bg-white/5"
+                              ? "border"
+                              : "hover:bg-white/5"
+                          }
+                          style={
+                            isActive
+                              ? { backgroundColor: "rgba(21,128,61,0.1)", color: "var(--color-primary)", borderColor: "rgba(21,128,61,0.2)" }
+                              : { color: "var(--sidebar-text)" }
+                          }
                           }`}
                         >
-                          <Icon className={`w-5 h-5 shrink-0 transition-transform duration-200 ${isActive ? 'scale-110 text-green-500' : 'group-hover:scale-110'}`} />
+                          <Icon className={`w-5 h-5 shrink-0 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}
+                            style={{ color: isActive ? "var(--color-primary)" : "inherit" }} />
                           {!isCollapsed && (
-                            <span className={`font-bold text-sm tracking-tight ${isActive ? 'text-white' : ''}`}>
+                            <span className={`font-bold text-sm tracking-tight`} style={{ color: isActive ? "var(--sidebar-text-active)" : "inherit" }}>
                               {item.name}
                             </span>
                           )}
                           {isActive && !isCollapsed && (
-                            <div className="ml-auto w-1 h-1 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"></div>
+                            <div className="ml-auto w-1 h-1 rounded-full" style={{ backgroundColor: "var(--color-primary)", boxShadow: "0 0 8px var(--color-primary)" }}></div>
                           )}
                           {isActive && isCollapsed && (
-                            <div className="absolute left-0 w-1 h-6 bg-green-500 rounded-r-full"></div>
+                            <div className="absolute left-0 w-1 h-6 rounded-r-full" style={{ backgroundColor: "var(--color-primary)" }}></div>
                           )}
                         </Link>
                       );
@@ -225,10 +236,11 @@ const AdminSidebar = () => {
           </nav>
 
           {/* Footer & Collapse Toggle */}
-          <div className="p-4 border-t border-white/5 bg-black/20">
+          <div className="p-4 border-t" style={{ borderColor: "rgba(255,255,255,0.05)", backgroundColor: "rgba(0,0,0,0.2)" }}>
             <button
               onClick={toggleCollapse}
-              className={`hidden lg:flex items-center space-x-3 w-full px-4 py-2.5 rounded-xl text-slate-500 hover:text-white hover:bg-white/5 transition-all mb-2 ${isCollapsed ? 'justify-center' : ''}`}
+              className={`hidden lg:flex items-center space-x-3 w-full px-4 py-2.5 rounded-xl hover:bg-white/5 transition-all mb-2 ${isCollapsed ? 'justify-center' : ''}`}
+              style={{ color: "var(--sidebar-text)" }}
             >
               {isCollapsed ? <ChevronRight className="w-5 h-5" /> : (
                 <>
@@ -243,7 +255,8 @@ const AdminSidebar = () => {
                 clearPortalSession();
                 window.location.href = '/admin-login';
               }}
-              className={`flex items-center space-x-3 w-full px-4 py-2.5 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-400/5 transition-all font-bold group ${isCollapsed ? 'justify-center' : ''}`}
+              className={`flex items-center space-x-3 w-full px-4 py-2.5 rounded-xl hover:bg-red-400/5 transition-all font-bold group ${isCollapsed ? 'justify-center' : ''}`}
+              style={{ color: "var(--sidebar-text)" }}
             >
               <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
               {!isCollapsed && <span className="text-sm">Log Out</span>}
@@ -251,7 +264,7 @@ const AdminSidebar = () => {
             
             {!isCollapsed && (
               <div className="mt-4 text-center">
-                 <p className="text-[8px] font-black text-slate-700 uppercase tracking-widest">QuickRide v2.5.0</p>
+                 <p className="text-[8px] font-black uppercase tracking-widest" style={{ color: "var(--text-secondary)" }}>QuickRide v2.5.0</p>
               </div>
             )}
           </div>
@@ -261,7 +274,8 @@ const AdminSidebar = () => {
       {/* Mobile Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-30 lg:hidden animate-in fade-in duration-300"
+          className="fixed inset-0 backdrop-blur-sm z-30 lg:hidden animate-in fade-in duration-300"
+          style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
           onClick={() => setIsOpen(false)}
         />
       )}

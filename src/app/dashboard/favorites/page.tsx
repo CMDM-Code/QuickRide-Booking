@@ -49,11 +49,23 @@ export default function FavoritesPage() {
           carTypesSnap.docs.map((d: any) => [d.id, d.data()])
       );
 
-      const data = vehsSnap.docs.map((d: any) => ({
-        id: d.id,
-        ...d.data(),
-        car_type: carTypesMap[d.data().car_type_id] || { name: 'Standard', driver_only: false }
-      } as Vehicle));
+      const data = vehsSnap.docs.map((d: any) => {
+        const vehicleData = d.data();
+        const carTypeId = vehicleData.car_type_id;
+        let carType = carTypesMap[carTypeId];
+        
+        // If not found in car_types collection, extract name from car_type_id
+        if (!carType && carTypeId) {
+          const typeName = carTypeId.replace('type_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          carType = { name: typeName, driver_only: false };
+        }
+        
+        return {
+          id: d.id,
+          ...vehicleData,
+          car_type: carType || { name: 'Standard', driver_only: false }
+        };
+      }) as Vehicle[];
 
       setFavoriteVehicles(data);
     } catch (err) {

@@ -114,7 +114,12 @@ export function getDisplayPrice(
   pricingSheets: PricingSheet[],
   schedules: PricingSchedule[],
   pricingMeta: PricingMetaType
-): { price: number; mode: 'locked' | 'live'; schedule?: PricingSchedule | null } {
+): { price: number; mode: 'locked' | 'live' | 'override'; schedule?: PricingSchedule | null } {
+  // A4: Priority 1 — Price Override
+  if (booking.price_override !== undefined && booking.price_override !== null) {
+    return { price: booking.price_override, mode: 'override' };
+  }
+
   if (getPricingBehaviorMode() === 'locked') {
     return { price: booking.total_price, mode: 'locked' };
   }

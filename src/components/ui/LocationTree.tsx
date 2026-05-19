@@ -23,6 +23,8 @@ interface LocationTreeProps {
   onAddChild: (parentId: string) => void;
   onEdit: (id: string) => void;
   onChangeParent: (id: string) => void;
+  /** When true, hides the inline action buttons (Parent / Child / Edit). Used in read-only pickers like Rate Management. */
+  readOnly?: boolean;
 }
 
 export function LocationTree({
@@ -36,6 +38,7 @@ export function LocationTree({
   onAddChild,
   onEdit,
   onChangeParent,
+  readOnly = false,
 }: LocationTreeProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(roots));
 
@@ -125,12 +128,14 @@ export function LocationTree({
       <div key={id}>
         {/* Node row */}
         <div
-          className={`group flex items-center gap-1 px-3 py-2 rounded-xl cursor-pointer transition-all duration-150 ${
-            isSelected
-              ? 'bg-green-50 border border-green-200 shadow-sm'
-              : 'hover:bg-slate-50 border border-transparent'
+          className={`group flex items-center gap-1 px-3 py-2 rounded-xl cursor-pointer transition-all duration-150 border ${
+            isSelected ? '' : 'border-transparent'
           }`}
-          style={{ paddingLeft: `${12 + depth * 20}px` }}
+          style={
+            isSelected
+              ? { backgroundColor: "var(--success-bg)", borderColor: "var(--success)", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", paddingLeft: `${12 + depth * 20}px` }
+              : { backgroundColor: "transparent", paddingLeft: `${12 + depth * 20}px` }
+          }
           onClick={() => onSelect(isSelected ? null : id)}
         >
           {/* Expand/collapse chevron */}
@@ -141,8 +146,9 @@ export function LocationTree({
               if (hasChildren) toggleExpand(id);
             }}
             className={`w-5 h-5 flex items-center justify-center rounded-md transition-colors ${
-              hasChildren ? 'hover:bg-slate-200 text-slate-500' : 'text-transparent'
+              hasChildren ? '' : 'text-transparent'
             }`}
+            style={hasChildren ? { color: "var(--text-secondary)" } : {}}
           >
             {hasChildren &&
               (nodeExpanded ? (
@@ -154,15 +160,16 @@ export function LocationTree({
 
           {/* Icon */}
           <div
-            className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+            className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0`}
+            style={
               isDefault
-                ? 'bg-amber-100 text-amber-700'
+                ? { backgroundColor: "var(--warning-bg)", color: "var(--warning)" }
                 : depth === 0
-                ? 'bg-green-100 text-green-700'
+                ? { backgroundColor: "var(--success-bg)", color: "var(--success)" }
                 : depth === 1
-                ? 'bg-blue-100 text-blue-700'
-                : 'bg-slate-100 text-slate-600'
-            }`}
+                ? { backgroundColor: "var(--info-bg)", color: "var(--info)" }
+                : { backgroundColor: "var(--bg-subtle)", color: "var(--text-secondary)" }
+            }
           >
             <MapPin className="w-3.5 h-3.5" />
           </div>
@@ -171,43 +178,50 @@ export function LocationTree({
           <div className="flex-1 min-w-0 ml-1">
             <div className="flex items-center gap-2">
               <span
-                className={`font-bold text-sm truncate ${
-                  isMatch ? 'text-green-700 underline decoration-green-300' : 'text-slate-900'
-                }`}
+                className={`font-bold text-sm truncate`}
+                style={{
+                  color: isMatch ? "var(--success)" : "var(--text-primary)",
+                  textDecoration: isMatch ? "underline" : "none",
+                  textDecorationColor: isMatch ? "var(--success-bg)" : "inherit"
+                }}
               >
                 {node.name}
               </span>
               {isDefault && (
-                <span className="text-[8px] font-black uppercase tracking-widest bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded shrink-0">
+                <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0"
+                  style={{ backgroundColor: "var(--warning-bg)", color: "var(--warning)" }}>
                   fallback
                 </span>
               )}
               {node.levelName && (
-                <span className="text-[9px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded shrink-0">
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                  style={{ backgroundColor: "var(--bg-subtle)", color: "var(--text-secondary)" }}>
                   {node.levelName}
                 </span>
               )}
               {!node.levelName && !isDefault && (
-                <span className="text-[9px] font-bold bg-orange-50 text-orange-500 px-1.5 py-0.5 rounded shrink-0">
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                  style={{ backgroundColor: "var(--warning-bg)", color: "var(--warning)" }}>
                   unregistered
                 </span>
               )}
             </div>
             {hasChildren && (
-              <span className="text-[10px] text-slate-400 font-medium">
+              <span className="text-[10px] font-medium" style={{ color: "var(--text-muted)" }}>
                 {(children[id] || []).length} child{(children[id] || []).length !== 1 ? 'ren' : ''}
               </span>
             )}
           </div>
 
           {/* Inline ID */}
-          <span className="text-[9px] font-mono text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded hidden group-hover:inline-flex shrink-0">
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded hidden group-hover:inline-flex shrink-0"
+            style={{ color: "var(--text-muted)", backgroundColor: "var(--bg-subtle)" }}>
             {id}
           </span>
         </div>
 
-        {/* Action buttons when selected */}
-        {isSelected && (
+        {/* Action buttons when selected — hidden in readOnly mode */}
+        {isSelected && !readOnly && (
           <div
             className="flex items-center gap-2 py-2 animate-in fade-in slide-in-from-top-1 duration-200"
             style={{ paddingLeft: `${44 + depth * 20}px` }}
@@ -218,7 +232,8 @@ export function LocationTree({
                 e.stopPropagation();
                 onChangeParent(id);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-black transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-white rounded-lg text-xs font-bold transition-all"
+              style={{ backgroundColor: "var(--text-primary)" }}
               title="Change or create parent"
             >
               <GitBranch className="w-3 h-3" />
@@ -230,7 +245,8 @@ export function LocationTree({
                 e.stopPropagation();
                 onAddChild(id);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-700 text-white rounded-lg text-xs font-bold hover:bg-green-800 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-white rounded-lg text-xs font-bold transition-all"
+              style={{ backgroundColor: "var(--color-primary)" }}
               title="Add child location"
             >
               <Plus className="w-3 h-3" />
@@ -245,7 +261,8 @@ export function LocationTree({
                 }
               }}
               disabled={!hasChildren}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold hover:bg-blue-100 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{ backgroundColor: "var(--info-bg)", color: "var(--info)", borderColor: "var(--info)" }}
               title="View children"
             >
               <Eye className="w-3 h-3" />
@@ -257,7 +274,8 @@ export function LocationTree({
                 e.stopPropagation();
                 onEdit(id);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-200 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-bold transition-all"
+              style={{ backgroundColor: "var(--bg-subtle)", color: "var(--text-primary)", borderColor: "var(--border-default)" }}
               title="Edit location"
             >
               <Edit3 className="w-3 h-3" />
@@ -271,8 +289,8 @@ export function LocationTree({
           <div className="relative">
             {/* Connector line */}
             <div
-              className="absolute top-0 bottom-0 border-l-2 border-slate-100"
-              style={{ left: `${22 + depth * 20}px` }}
+              className="absolute top-0 bottom-0 border-l-2"
+              style={{ borderColor: "var(--border-subtle)", left: `${22 + depth * 20}px` }}
             />
             {(children[id] || []).map((childId) => renderNode(childId, depth + 1))}
           </div>
@@ -285,7 +303,7 @@ export function LocationTree({
     <div className="space-y-0.5">
       {roots.map((rootId) => renderNode(rootId, 0))}
       {roots.length === 0 && (
-        <div className="text-center py-12 text-slate-400 font-medium">
+        <div className="text-center py-12 font-medium" style={{ color: "var(--text-muted)" }}>
           No locations found. Create a root location to get started.
         </div>
       )}

@@ -91,6 +91,7 @@ export async function checkConflict(
 
 export interface SubmitBookingResult {
   allowed: boolean;
+  autoReject?: boolean;
   reason?: string;
   conflict?: ConflictResult;
 }
@@ -129,11 +130,12 @@ export async function validateBookingSubmit(
   const conflict = await checkConflict(vehicleId, startDate, endDate);
 
   if (conflict.hasConflict) {
+    if (config.booking.auto_reject_on_conflict) {
+      // B2.1 — auto-reject on submission; caller must create booking as 'rejected'
+      return { allowed: true, autoReject: true, reason: 'Booking will be automatically rejected due to a scheduling conflict.', conflict };
+    }
     if (conflict.policy === 'block') {
       return { allowed: false, reason: 'This vehicle is not available for the selected dates.', conflict };
-    }
-    if (config.booking.auto_reject_on_conflict) {
-      return { allowed: false, reason: 'Booking was automatically rejected due to a scheduling conflict.', conflict };
     }
     if (conflict.policy === 'warn') {
       // Warn but allow — caller should surface the warning

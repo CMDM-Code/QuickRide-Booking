@@ -1,6 +1,5 @@
 'use client';
 
-import StaffLayout from "../layout";
 import { useEffect, useState } from "react";
 import { getAllBookings, updateBookingStatus, type FirestoreBooking } from "@/lib/booking-service";
 import { getAllVehicles, type Vehicle } from "@/lib/vehicle-service";
@@ -65,8 +64,7 @@ export default function ActiveRentalsPage() {
   };
 
   return (
-    <StaffLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Active Rentals</h1>
           <p className="text-slate-600 mt-1">Track vehicles currently on rent and process returns</p>
@@ -115,6 +113,5 @@ export default function ActiveRentalsPage() {
           </div>
         )}
       </div>
-    </StaffLayout>
   );
 }

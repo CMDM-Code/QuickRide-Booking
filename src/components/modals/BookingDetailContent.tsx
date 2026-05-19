@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getFullConfig } from '@/lib/settings-service';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import {
   AlertCircle,
   CheckCircle2,
@@ -23,7 +23,7 @@ interface BookingDetailContentProps {
 }
 
 export default function BookingDetailContent({ booking, onPaymentSuccess }: BookingDetailContentProps) {
-  const config = getFullConfig();
+  const { settings: config } = useSettings();
   const [loading, setLoading] = useState(false);
   const [partialAmount, setPartialAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
@@ -133,13 +133,22 @@ export default function BookingDetailContent({ booking, onPaymentSuccess }: Book
     }
   };
 
+  const formatSafeDate = (val: any) => {
+    if (!val) return 'N/A';
+    if (typeof val === 'string') return val;
+    if (val instanceof Date) return val.toLocaleDateString();
+    if (typeof val?.seconds === 'number') return new Date(val.seconds * 1000).toLocaleDateString();
+    if (typeof val?.toDate === 'function') return val.toDate().toLocaleDateString();
+    return String(val);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Booking #{booking.id.slice(0, 8)}</h2>
         <p className="text-slate-600 text-sm mt-1">
-          {booking.start_date} to {booking.end_date}
+          {formatSafeDate(booking.start_date)} to {formatSafeDate(booking.end_date)}
         </p>
       </div>
 
@@ -159,7 +168,7 @@ export default function BookingDetailContent({ booking, onPaymentSuccess }: Book
           <div>
             <p className="text-slate-600">Dates</p>
             <p className="font-bold text-slate-900">
-              {booking.start_date} → {booking.end_date}
+              {formatSafeDate(booking.start_date)} → {formatSafeDate(booking.end_date)}
             </p>
           </div>
           <div>

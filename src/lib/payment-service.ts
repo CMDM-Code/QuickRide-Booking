@@ -60,7 +60,17 @@ export function calculateDownpayment(totalPrice: number): DownpaymentResult {
   };
 }
 
-// ─── B1.2 — Payment Timing ────────────────────────────────────────────────────
+// ─── B1.x — Maintenance Block Check ─────────────────────────────────────────
+
+function isPaymentProcessingBlocked(): { blocked: boolean; reason?: string } {
+  const cfg = getFullConfig();
+  if (cfg.system.maintenance_enabled && cfg.system.maintenance_blocks_payment_processing) {
+    return { blocked: true, reason: 'Payment processing is temporarily disabled during maintenance.' };
+  }
+  return { blocked: false };
+}
+
+// ─── B1.2 — Payment Timing Helpers ────────────────────────────────────────────────────
 
 /**
  * Returns when payment must be made relative to booking approval.
@@ -185,6 +195,11 @@ export async function processRefund(
   staffName: string,
   overrideAmount?: number
 ): Promise<RefundResult> {
+  const block = isPaymentProcessingBlocked();
+  if (block.blocked) {
+    return { success: false, refundAmount: 0, mode: 'percentage', reason: block.reason };
+  }
+
   const config = getFullConfig();
   const pay = config.payment;
 
@@ -300,6 +315,11 @@ export async function submitPartialPayment(
   paidAmount: number,
   paymentMethod?: string
 ): Promise<PartialPaymentResult> {
+  const block = isPaymentProcessingBlocked();
+  if (block.blocked) {
+    return { success: false, newStatus: 'paid', amountPaid: 0, remainingBalance: 0, reason: block.reason };
+  }
+
   const config = getFullConfig();
   if (!config.payment.allow_partial_payment) {
     return { success: false, newStatus: 'paid', amountPaid: 0, remainingBalance: 0, reason: 'Partial payment not allowed.' };
@@ -385,6 +405,9 @@ export async function canRetryPayment(bookingId: string): Promise<PaymentRetryEl
  * @param staffName   Name of the staff/customer initiating retry.
  */
 export async function retryPayment(bookingId: string, staffName: string = 'customer'): Promise<boolean> {
+  const block = isPaymentProcessingBlocked();
+  if (block.blocked) return false;
+
   const config = getFullConfig();
   const eligibility = await canRetryPayment(bookingId);
 

@@ -137,7 +137,11 @@ export async function fetchRecentActivity() {
               }
           }
 
-        const createdAt = b.created_at instanceof Timestamp ? b.created_at.toDate() : new Date(b.created_at);
+        const createdAt = b.created_at instanceof Timestamp 
+          ? b.created_at.toDate() 
+          : (typeof b.created_at?.seconds === 'number' 
+              ? new Date(b.created_at.seconds * 1000) 
+              : new Date(b.created_at));
 
         return {
             action: `Booking ${b.status.toUpperCase()}`,

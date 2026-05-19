@@ -52,8 +52,9 @@ export interface PricingSettings {
   rounding_rule: 'ceil' | 'floor' | 'nearest';
   allow_staff_pricing_override: boolean;
   allow_admin_pricing_override: boolean;
-  // scheduled_pricing_enabled removed (A3)
-  // overlap_resolution removed (A4) — always block
+  global_hourly_rate: number;
+  global_driver_fee: number;
+  fallback_location_id: string;
 }
 
 // ─── 5. AVAILABILITY ───────────────────────────────────────────────────────
@@ -187,6 +188,9 @@ export function getDefaultFullConfig(): FullSystemConfig {
       rounding_rule: 'ceil',
       allow_staff_pricing_override: false,
       allow_admin_pricing_override: true,
+      global_hourly_rate: 200,
+      global_driver_fee: 1000,
+      fallback_location_id: 'loc_gensan',
     },
     availability: {
       buffer_time_minutes: 30,
@@ -236,7 +240,7 @@ export function getDefaultFullConfig(): FullSystemConfig {
       lateFeeMethod: 'hourly_rate',
       lateFeeFlat: 500,
       lateFeePercent: 15,
-      taxRate: 12,
+      taxRate: 0,
     },
   };
 }

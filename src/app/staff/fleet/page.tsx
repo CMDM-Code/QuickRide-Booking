@@ -1,6 +1,5 @@
 'use client';
 
-import StaffLayout from "../layout";
 import { useEffect, useState } from "react";
 import { getAllVehicles, updateVehicleStatus, type Vehicle } from "@/lib/vehicle-service";
 
@@ -52,8 +51,7 @@ export default function FleetPage() {
   };
 
   return (
-    <StaffLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Fleet Management</h1>
           <p className="text-slate-600 mt-1">Manage vehicle status and maintenance</p>
@@ -116,6 +114,5 @@ export default function FleetPage() {
           )}
         </div>
       </div>
-    </StaffLayout>
   );
 }

@@ -38,8 +38,20 @@ export async function fetchStaffMembers(): Promise<Profile[]> {
 export async function assignBookingToStaff(bookingId: string, staffId: string, adminName: string) {
   try {
     const bookingRef = doc(db, BOOKINGS_COLLECTION, bookingId);
+    const snap = await getDoc(bookingRef);
+    const existingLog = snap.exists() ? (snap.data().activity_log || []) : [];
+
     await updateDoc(bookingRef, {
-      assigned_staff_id: staffId
+      assigned_staff_id: staffId,
+      activity_log: [
+        ...existingLog,
+        {
+          at: new Date().toISOString(),
+          by: adminName,
+          action: 'staff_assigned',
+          detail: `Assigned to staff ID: ${staffId}`
+        }
+      ]
     });
 
     // Notify the staff member

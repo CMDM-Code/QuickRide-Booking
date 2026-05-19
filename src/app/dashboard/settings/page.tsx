@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { authClient } from "@/lib/auth-client";
-import { db } from "@/lib/firebase";
+import { authClient, setSession, User } from "@/lib/auth-client";
+import { db, auth } from "@/lib/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
 import { NotificationPreferences } from "@/lib/types";
 import { DEFAULT_NOTIFICATION_PREFERENCES, updateNotificationPreferences } from "@/lib/notification-service";
 import { Bell, Mail, Smartphone, ShieldCheck, Tag } from "lucide-react";
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<{id: string; name: string; email: string} | null>(null);
+  const [user, setUser] = useState<Omit<User, 'password'> | null>(null);
   const [name, setName] = useState("");
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
   const [isSavingPrefs, setIsSavingPrefs] = useState(false);
@@ -79,16 +80,39 @@ export default function SettingsPage() {
     }));
   };
 
-  const handleProfileUpdate = (e: React.FormEvent) => {
+  const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
+
     setSuccessMessage("");
     setErrorMessage("");
 
-    setSuccessMessage("Profile updated successfully!");
+    try {
+      // Update Firestore profile
+      const profileRef = doc(db, 'profiles', user.id);
+      await updateDoc(profileRef, {
+        full_name: name.trim(),
+        updated_at: new Date().toISOString()
+      });
+
+      // Update local session
+      const updatedUser = { ...user, name: name.trim() };
+      setSession(updatedUser);
+
+      setSuccessMessage("Profile updated successfully!");
+    } catch (error) {
+      setErrorMessage("Failed to update profile. Please try again.");
+      console.error("Profile update error:", error);
+    }
   };
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth?.currentUser || !user?.email) {
+      setErrorMessage("You must be logged in to change password");
+      return;
+    }
+
     setSuccessMessage("");
     setErrorMessage("");
 
@@ -102,10 +126,33 @@ export default function SettingsPage() {
       return;
     }
 
-    setSuccessMessage("Password changed successfully!");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    if (!currentPassword) {
+      setErrorMessage("Please enter your current password");
+      return;
+    }
+
+    try {
+      // Re-authenticate user before password change
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+
+      // Update password
+      await updatePassword(auth.currentUser, newPassword);
+
+      setSuccessMessage("Password changed successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      console.error("Password change error:", error);
+      if (error.code === 'auth/wrong-password') {
+        setErrorMessage("Current password is incorrect");
+      } else if (error.code === 'auth/too-many-requests') {
+        setErrorMessage("Too many attempts. Please try again later.");
+      } else {
+        setErrorMessage("Failed to change password. Please try again.");
+      }
+    }
   };
 
   return (

@@ -1,6 +1,5 @@
 'use client';
 
-import StaffLayout from "../layout";
 import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { 
@@ -11,6 +10,7 @@ import {
 } from "@/lib/notification-service";
 import { Notification } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
+import { toSafeDate } from "@/lib/api-utils";
 import { Bell, Calendar, MessageSquare, Tag, Info, Trash2, CheckCircle, AlertTriangle } from "lucide-react";
 
 export default function NotificationsPage() {
@@ -45,8 +45,7 @@ export default function NotificationsPage() {
   };
 
   return (
-    <StaffLayout>
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h1 className="text-4xl font-black text-slate-900 tracking-tight">Staff Notifications</h1>
@@ -97,7 +96,10 @@ export default function NotificationsPage() {
                       <p className="text-sm text-slate-500 mt-1 leading-relaxed">{n.message}</p>
                     </div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap mt-1">
-                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                      {(() => {
+                        const d = toSafeDate(n.created_at);
+                        return d ? formatDistanceToNow(d, { addSuffix: true }) : 'just now';
+                      })()}
                     </span>
                   </div>
 
@@ -129,6 +131,5 @@ export default function NotificationsPage() {
           </div>
         )}
       </div>
-    </StaffLayout>
   );
 }

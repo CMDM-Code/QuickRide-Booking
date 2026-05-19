@@ -5,9 +5,10 @@ import {
   signOut, 
   onAuthStateChanged,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  updateProfile
 } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
 export interface User {
@@ -46,7 +47,7 @@ const getSession = (): Omit<User, 'password'> | null => {
   }
 };
 
-const setSession = (user: Omit<User, 'password'> | null) => {
+export const setSession = (user: Omit<User, 'password'> | null) => {
   if (user) {
     localStorage.setItem('quickride_session', JSON.stringify(user));
   } else {
@@ -58,6 +59,36 @@ const setSession = (user: Omit<User, 'password'> | null) => {
 };
 
 export const authClient = {
+  async getProfileName(userId: string) {
+    if (!db) return "";
+    try {
+      const profileSnap = await getDoc(doc(db, 'profiles', userId));
+      if (!profileSnap.exists()) return "";
+
+      const data = profileSnap.data();
+      return typeof data.full_name === 'string' ? data.full_name.trim() : "";
+    } catch (err) {
+      console.error("Profile name lookup error:", err);
+      return "";
+    }
+  },
+
+  async buildUserData(user: { uid: string; email: string | null; displayName: string | null }) {
+    const profileName = await this.getProfileName(user.uid);
+    const resolvedName =
+      user.displayName?.trim() ||
+      profileName ||
+      user.email?.split('@')[0] ||
+      '';
+
+    return {
+      id: user.uid,
+      name: resolvedName,
+      email: user.email || '',
+      createdAt: new Date().toISOString()
+    };
+  },
+
   async ensureProfile(user: { id: string, email: string, name: string }) {
     if (!db) return;
     try {
@@ -72,6 +103,17 @@ export const authClient = {
           created_at: serverTimestamp(),
           updated_at: serverTimestamp()
         });
+      } else if (user.name.trim()) {
+        const profileData = profileSnap.data();
+        const storedName =
+          typeof profileData.full_name === 'string' ? profileData.full_name.trim() : '';
+
+        if (!storedName || storedName !== user.name.trim()) {
+          await updateDoc(profileRef, {
+            full_name: user.name.trim(),
+            updated_at: serverTimestamp()
+          });
+        }
       }
     } catch (err) {
       console.error("Critical Profile sync error:", err);
@@ -87,13 +129,16 @@ export const authClient = {
     try {
       const userCredential = await createUserWithEmailAndPassword(authInstance, email, password);
       const firebaseUser = userCredential.user;
-      
-      const userData = {
-        id: firebaseUser.uid,
-        name: name,
+
+      if (name.trim()) {
+        await updateProfile(firebaseUser, { displayName: name.trim() });
+      }
+
+      const userData = await this.buildUserData({
+        uid: firebaseUser.uid,
         email: firebaseUser.email || email,
-        createdAt: new Date().toISOString()
-      };
+        displayName: name.trim() || firebaseUser.displayName
+      });
       
       await this.ensureProfile(userData);
       
@@ -137,13 +182,8 @@ export const authClient = {
     try {
       const userCredential = await signInWithEmailAndPassword(authInstance, email, password);
       const firebaseUser = userCredential.user;
-      
-      const userData = {
-        id: firebaseUser.uid,
-        name: firebaseUser.displayName || '',
-        email: firebaseUser.email || email,
-        createdAt: new Date().toISOString()
-      };
+
+      const userData = await this.buildUserData(firebaseUser);
       
       await this.ensureProfile(userData);
       
@@ -210,13 +250,8 @@ export const authClient = {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      
-      const userData = {
-        id: user.uid,
-        name: user.displayName || '',
-        email: user.email || '',
-        createdAt: new Date().toISOString()
-      };
+
+      const userData = await this.buildUserData(user);
       
       await this.ensureProfile(userData);
       setSession(userData);
@@ -231,13 +266,8 @@ export const authClient = {
     if (typeof window !== 'undefined' && auth) {
       onAuthStateChanged(auth, async (user) => {
         if (user) {
-          const userData = {
-            id: user.uid,
-            name: user.displayName || '',
-            email: user.email || '',
-            createdAt: new Date().toISOString()
-          };
-          
+          const userData = await authClient.buildUserData(user);
+
           await authClient.ensureProfile(userData);
           setSession(userData);
         } else {

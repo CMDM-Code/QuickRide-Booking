@@ -86,6 +86,7 @@ export default function SignupPage() {
               src="https://assets.kiloapps.io/user_bc07d79b-502e-47d8-aa85-a2d78aa3c851/54e7622e-04e6-46b6-a8bb-b9d5f9a95743/368d7c42-20fd-4323-9ff9-f3b76d6ff19f.png"
               alt="Mitsubishi Mirage GLS 2025"
               fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-contain p-12"
             />
           </div>

@@ -215,6 +215,7 @@ function toISOString(val: any): string {
   if (!val) return new Date().toISOString();
   if (val instanceof Timestamp) return val.toDate().toISOString();
   if (typeof val?.toDate === 'function') return val.toDate().toISOString();
+  if (typeof val?.seconds === 'number') return new Date(val.seconds * 1000).toISOString();
   if (typeof val === 'string') return val;
   return new Date().toISOString();
 }

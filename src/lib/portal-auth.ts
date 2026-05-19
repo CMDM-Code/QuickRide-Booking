@@ -7,6 +7,7 @@ export interface PortalSession {
   role: PortalRole;
   userId?: string;
   email?: string;
+  name?: string;
   loginTime: string;
 }
 

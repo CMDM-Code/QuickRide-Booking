@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { authClient } from '@/lib/auth-client';
+import { getCustomerTier } from '@/lib/loyalty-service';
 import { Booking, Notification } from '@/lib/types';
-import { withTimeout } from '@/lib/api-utils';
+import { withTimeout, toSafeDate } from '@/lib/api-utils';
 import { subscribeToNotifications, markAllAsRead } from '@/lib/notification-service';
 import { Card, StatCard, CardHeader, InfoCard } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -211,7 +212,10 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-1.5 mb-0.5">
                         {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-info)]" />}
                         <p className="text-xs text-[var(--text-tertiary)]">
-                          {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {(() => {
+                            const d = toSafeDate(n.created_at);
+                            return d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                          })()}
                         </p>
                       </div>
                       <p className="text-sm font-semibold text-[var(--text-primary)]">{n.title}</p>
@@ -219,6 +223,26 @@ export default function DashboardPage() {
                     </div>
                   ))
                 )}
+              </div>
+            </Card>
+
+            {/* Loyalty Rewards */}
+            <Card variant="elevated" padding="lg" className="!bg-gradient-to-br !from-amber-50 !to-orange-50 dark:!from-amber-950/30 dark:!to-orange-950/30 !border-amber-200 dark:!border-amber-800">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <Star className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-[var(--text-primary)]">
+                    {getCustomerTier(stats.totalTrips).tier}
+                  </h3>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    {stats.totalTrips} trip{stats.totalTrips === 1 ? '' : 's'} completed
+                  </p>
+                </div>
+              </div>
+              <div className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                {getCustomerTier(stats.totalTrips).message}
               </div>
             </Card>
 

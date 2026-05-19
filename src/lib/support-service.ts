@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { createNotification } from './notification-service';
+import { getFullConfig } from './settings-service';
 
 const THREADS_COLLECTION = 'support_threads';
 
@@ -225,8 +226,18 @@ export function subscribeToUserThreads(
   });
 }
 
+function getRetentionCutoff(): Date {
+  const cfg = getFullConfig();
+  const policy = cfg.system.chat_retention_policy || '90 days';
+  const days = parseInt(policy, 10) || 90;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  return cutoff;
+}
+
 /**
  * Subscribe to replies for a specific thread.
+ * B5.4: Filters out replies older than retention window.
  */
 export function subscribeToReplies(
   threadId: string,
@@ -238,15 +249,18 @@ export function subscribeToReplies(
   );
 
   return onSnapshot(q, snap => {
-    const replies: SupportReply[] = snap.docs.map(d => ({
-      id: d.id,
-      thread_id: threadId,
-      sender_id: d.data().sender_id,
-      sender_name: d.data().sender_name,
-      sender_role: d.data().sender_role,
-      content: d.data().content,
-      created_at: toISO(d.data().created_at),
-    }));
+    const cutoff = getRetentionCutoff();
+    const replies: SupportReply[] = snap.docs
+      .map(d => ({
+        id: d.id,
+        thread_id: threadId,
+        sender_id: d.data().sender_id,
+        sender_name: d.data().sender_name,
+        sender_role: d.data().sender_role,
+        content: d.data().content,
+        created_at: toISO(d.data().created_at),
+      }))
+      .filter(r => new Date(r.created_at) >= cutoff);
     callback(replies);
   });
 }

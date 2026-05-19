@@ -16,17 +16,13 @@ import {
 import { Vehicle, CarType, PricingSheet } from "@/lib/types";
 import { titleFromId } from "@/lib/pricing";
 import { adminStore } from "@/lib/admin-store";
-import { withTimeout } from "@/lib/api-utils";
+import { withTimeout, toSafeDate } from "@/lib/api-utils";
 import { FilterDropdown, FilterConfig, ActiveFilters } from "@/components/ui/FilterDropdown";
-
-function toDate(v: any): Date | null {
-  if (!v) return null;
-  if (v instanceof Date) return v;
-  if (v instanceof Timestamp) return v.toDate();
-  if (typeof v?.seconds === 'number') return new Date(v.seconds * 1000);
-  const d = new Date(v);
-  return Number.isFinite(d.getTime()) ? d : null;
-}
+import { motion, AnimatePresence } from "framer-motion";
+import { PageHeader } from "@/components/layout/DashboardShell";
+import { Card } from "@/components/ui/Card";
+import { Button, IconButton } from "@/components/ui/Button";
+import { Car, Users, Settings2, Trash2, Edit2, AlertCircle } from "lucide-react";
 
 export default function VehicleManagementPage() {
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -96,15 +92,27 @@ export default function VehicleManagementPage() {
         }
         const carTypesMap = Object.fromEntries(mergedCarTypes.map(t => [t.id, t]));
 
-        let vehiclesData = vehsSnap.docs.map(d => ({
-            id: d.id,
-            ...d.data(),
-            car_type: carTypesMap[d.data().car_type_id] || { name: 'Standard' }
-        }));
+        let vehiclesData = vehsSnap.docs.map(d => {
+            const vehicleData = d.data();
+            const carTypeId = vehicleData.car_type_id;
+            let carType = carTypesMap[carTypeId];
+            
+            // If not found in car_types collection, extract name from car_type_id
+            if (!carType && carTypeId) {
+              const typeName = carTypeId.replace('type_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+              carType = { id: carTypeId, name: typeName, driver_only: false };
+            }
+            
+            return {
+              id: d.id,
+              ...vehicleData,
+              car_type: carType || { name: 'Standard' }
+            };
+          });
         
         vehiclesData.sort((a: any, b: any) => {
-           const timeA = a.created_at?.toMillis ? a.created_at.toMillis() : 0;
-           const timeB = b.created_at?.toMillis ? b.created_at.toMillis() : 0;
+           const timeA = toSafeDate(a.created_at)?.getTime() ?? 0;
+           const timeB = toSafeDate(b.created_at)?.getTime() ?? 0;
            return timeB - timeA;
         });
 
@@ -161,8 +169,8 @@ export default function VehicleManagementPage() {
       for (const b of bookings) {
         const carId = String(b.car_id ?? '');
         if (!carId) continue;
-        const s = toDate(b.start_date);
-        const e = toDate(b.end_date);
+        const s = toSafeDate(b.start_date);
+        const e = toSafeDate(b.end_date);
         if (!s || !e) continue;
         (bookingByVehicle[carId] ||= []).push({ start: s, end: e });
       }
@@ -313,22 +321,15 @@ export default function VehicleManagementPage() {
   }
 
   return (
-    <>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-               <h1 className="text-3xl font-bold text-slate-900 leading-tight">Fleet Management</h1>
-               <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${mode === 'cloud' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                 {mode === 'cloud' ? '● Cloud Synced' : '⚠ Local Mode'}
-               </span>
-            </div>
-            <p className="text-slate-600">Add and manage your car inventory. {mode === 'local' && '(Syncing disabled in Local Mode)'}</p>
-          </div>
-          <div className="flex gap-3">
+    <div className="space-y-6">
+      <PageHeader
+        title="Fleet Management"
+        subtitle="Add and manage your car inventory."
+        action={
+          <div className="flex items-center gap-3">
              <button
               onClick={fetchData}
-              className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all"
+              className="p-3 bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] rounded-xl transition-all border border-[var(--border-subtle)]"
               title="Refresh Connection"
              >
                 🔄
@@ -337,250 +338,279 @@ export default function VehicleManagementPage() {
                value={search}
                onChange={(e) => setSearch(e.target.value)}
                placeholder="Search vehicle, type..."
-               className="px-4 py-3 rounded-xl border border-slate-200 bg-white font-bold text-sm text-slate-700 outline-none w-[260px]"
+               className="px-4 py-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] font-bold text-sm text-[var(--text-primary)] outline-none w-[260px] focus:border-[var(--color-primary-500)]"
              />
              <FilterDropdown
                filters={filterConfigs}
                onApply={(filters) => setActiveFilters(filters)}
+             />
+             <Button
+               onClick={() => {
+                   setEditingVehicleId(null);
+                   setNewVehicle({
+                       name: '',
+                       car_type_id: carTypes[0]?.id || '',
+                       year: new Date().getFullYear().toString(),
+                       seats: 5,
+                       transmission: 'Automatic',
+                       image_url: '',
+                       available: true
+                   });
+                   setShowCreateForm(true);
+               }}
+               className="bg-[var(--color-primary-600)] hover:bg-[var(--color-primary-700)] text-white shadow-lg"
              >
-               {(activeFilters) => (
-                 <button
-                  onClick={() => {
-                      setEditingVehicleId(null);
-                      setNewVehicle({
-                          name: '',
-                          car_type_id: carTypes[0]?.id || '',
-                          year: new Date().getFullYear().toString(),
-                          seats: 5,
-                          transmission: 'Automatic',
-                          image_url: '',
-                          available: true
-                      });
-                      setShowCreateForm(!showCreateForm);
-                  }}
-                  className="px-6 py-3 bg-green-700 hover:bg-green-800 text-white rounded-xl font-bold shadow-lg transition-all"
-                 >
-                   {showCreateForm ? 'Cancel' : 'Add New Vehicle'}
-                 </button>
-               )}
-             </FilterDropdown>
+               Add New Vehicle
+             </Button>
           </div>
-        </div>
+        }
+      />
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm lg:col-span-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Available between (no booking overlap)</p>
-            <div className="flex gap-2">
-              <input type="date" value={availFrom} onChange={(e) => setAvailFrom(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold text-xs" />
-              <input type="date" value={availTo} onChange={(e) => setAvailTo(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold text-xs" />
-            </div>
-            <p className="text-[10px] text-slate-500 mt-2 font-semibold">Uses bookings with status: approved/active.</p>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+        <Card className="lg:col-span-2 flex flex-col justify-center">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-tertiary)] mb-2">Available between (no booking overlap)</p>
+          <div className="flex gap-2">
+            <input type="date" value={availFrom} onChange={(e) => setAvailFrom(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] font-bold text-xs text-[var(--text-primary)] outline-none" />
+            <input type="date" value={availTo} onChange={(e) => setAvailTo(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] font-bold text-xs text-[var(--text-primary)] outline-none" />
           </div>
-          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Results</p>
-              <p className="text-2xl font-black text-slate-900">{vehiclesFiltered.length}</p>
-            </div>
-            <button
-              onClick={() => {
-                setSearch('');
-                setActiveFilters({});
-                setFilterAvailable('all');
-                setAvailFrom('');
-                setAvailTo('');
-              }}
-              className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200"
-            >
-              Reset
-            </button>
+          <p className="text-[10px] text-[var(--text-secondary)] mt-2 font-semibold">Uses bookings with status: approved/active.</p>
+        </Card>
+        <Card className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">Results</p>
+            <p className="text-2xl font-black text-[var(--text-primary)]">{vehiclesFiltered.length}</p>
           </div>
-        </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSearch('');
+              setActiveFilters({});
+              setFilterAvailable('all');
+              setAvailFrom('');
+              setAvailTo('');
+            }}
+            className="border-[var(--border-subtle)]"
+          >
+            Reset
+          </Button>
+        </Card>
+      </div>
 
-        {mode === 'local' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-               <span className="text-xl">📡</span>
-               <div>
-                  <p className="text-sm font-bold text-amber-900">Cloud Connection Hanging</p>
-                  <p className="text-xs text-amber-800/80">Switched to Local Mode (adminStore) to keep you working. Updates won't sync to server.</p>
-               </div>
-            </div>
-            <button onClick={fetchData} className="text-xs font-bold text-amber-700 underline px-3 py-1 hover:bg-amber-100 rounded-lg">Retry Sync</button>
+      {mode === 'local' && (
+        <Card className="bg-[var(--color-warning-light)] border-[var(--color-warning)]/30 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <AlertCircle className="w-5 h-5 text-[var(--color-warning)]" />
+             <div>
+                <p className="text-sm font-bold text-[var(--color-warning)]">Cloud Connection Hanging</p>
+                <p className="text-xs text-[var(--color-warning)]/80">Switched to Local Mode (adminStore) to keep you working. Updates won't sync to server.</p>
+             </div>
           </div>
-        )}
+          <button onClick={fetchData} className="text-xs font-bold text-[var(--color-warning)] underline px-3 py-1 hover:bg-[var(--color-warning)]/10 rounded-lg">Retry Sync</button>
+        </Card>
+      )}
 
-        {showCreateForm && (
-          <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8">
-            <h2 className="text-xl font-bold text-slate-900 mb-6">Vehicle Details</h2>
-            <form onSubmit={handleCreateVehicle} className="grid md:grid-cols-3 gap-6">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-slate-700 mb-2">Vehicle Name / Model</label>
-                <input
-                  type="text"
-                  value={newVehicle.name}
-                  onChange={(e) => setNewVehicle({...newVehicle, name: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
-                  placeholder="e.g. Toyota Vios XLE"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Car Type</label>
-                <select
-                  value={newVehicle.car_type_id}
-                  onChange={(e) => setNewVehicle({...newVehicle, car_type_id: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
-                >
-                  {carTypes.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Year</label>
-                <input
-                  type="text"
-                  value={newVehicle.year}
-                  onChange={(e) => setNewVehicle({...newVehicle, year: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Seats</label>
-                <input
-                  type="number"
-                  value={newVehicle.seats}
-                  onChange={(e) => setNewVehicle({...newVehicle, seats: parseInt(e.target.value)})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Transmission</label>
-                <select
-                  value={newVehicle.transmission}
-                  onChange={(e) => setNewVehicle({...newVehicle, transmission: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
-                >
-                  <option value="Automatic">Automatic</option>
-                  <option value="Manual">Manual</option>
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-slate-700 mb-2">Image URL</label>
-                <input
-                  type="text"
-                  value={newVehicle.image_url}
-                  onChange={(e) => setNewVehicle({...newVehicle, image_url: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 font-mono text-xs"
-                  placeholder="https://..."
-                />
-              </div>
-              <div className="flex items-end gap-3">
-                <button type="submit" className="flex-1 py-3 bg-green-700 text-white rounded-xl font-bold shadow-lg hover:bg-green-800 transition-all">
-                  {editingVehicleId ? 'Save Changes' : 'Create Vehicle'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="p-6 text-left text-sm font-bold text-slate-500">Vehicle</th>
-                  <th className="p-6 text-left text-sm font-bold text-slate-500">Type</th>
-                  <th className="p-6 text-left text-sm font-bold text-slate-500">Specs</th>
-                  <th className="p-6 text-left text-sm font-bold text-slate-500">Status</th>
-                  <th className="p-6 text-right text-sm font-bold text-slate-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vehiclesFiltered.map((vehicle) => (
-                  <tr key={vehicle.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+      <Card variant="elevated" padding="none" className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-[var(--bg-secondary)] border-b border-[var(--border-subtle)]">
+                <th className="p-6 text-left text-xs font-black uppercase text-[var(--text-tertiary)] tracking-wider">Vehicle</th>
+                <th className="p-6 text-left text-xs font-black uppercase text-[var(--text-tertiary)] tracking-wider">Type</th>
+                <th className="p-6 text-left text-xs font-black uppercase text-[var(--text-tertiary)] tracking-wider">Specs</th>
+                <th className="p-6 text-left text-xs font-black uppercase text-[var(--text-tertiary)] tracking-wider">Status</th>
+                <th className="p-6 text-right text-xs font-black uppercase text-[var(--text-tertiary)] tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <AnimatePresence>
+              <motion.tbody>
+                {vehiclesFiltered.map((vehicle, idx) => (
+                  <motion.tr 
+                    key={vehicle.id} 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)] hover:shadow-sm transition-all"
+                  >
                     <td className="p-6">
                       <div className="flex items-center gap-4">
-                        <div className="w-16 h-10 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
+                        <div className="w-16 h-10 bg-[var(--bg-tertiary)] rounded-lg overflow-hidden flex-shrink-0 border border-[var(--border-subtle)]">
                           {vehicle.image_url ? (
                             <img src={vehicle.image_url} alt="Car" className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-300 text-sm">🚗</div>
+                            <div className="w-full h-full flex items-center justify-center text-[var(--text-tertiary)] text-sm"><Car className="w-4 h-4"/></div>
                           )}
                         </div>
                         <div>
-                          <p className="font-bold text-slate-900">{vehicle.name}</p>
-                          <p className="text-[10px] text-slate-500 font-black uppercase tracking-tighter">{vehicle.year} Model</p>
+                          <p className="font-black text-[var(--text-primary)]">{vehicle.name}</p>
+                          <p className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-tighter mt-1">{vehicle.year} Model</p>
                         </div>
                       </div>
                     </td>
-                    <td className="p-6 font-medium text-slate-700">
+                    <td className="p-6 font-bold text-[var(--text-secondary)]">
                        {vehicle.car_type?.name || 'Standard'}
-                       <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{vehicle.car_type_id}</div>
+                       <div className="text-[10px] font-black uppercase tracking-widest text-[var(--text-tertiary)] mt-1">{vehicle.car_type_id}</div>
                     </td>
                     <td className="p-6">
-                      <div className="flex gap-4 text-xs font-bold text-slate-600">
-                        <span>👥 {vehicle.seats}</span>
-                        <span>⚙️ {vehicle.transmission}</span>
+                      <div className="flex gap-4 text-xs font-bold text-[var(--text-secondary)]">
+                        <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {vehicle.seats}</span>
+                        <span className="flex items-center gap-1"><Settings2 className="w-3 h-3"/> {vehicle.transmission}</span>
                       </div>
                     </td>
                     <td className="p-6">
                       <button 
                         onClick={() => toggleAvailability(vehicle.id, vehicle.available)}
-                        className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border outline-none ${
                         vehicle.available 
-                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
-                          : 'bg-slate-100 text-slate-500 border border-slate-200'
+                          ? 'bg-[var(--color-success-light)] text-[var(--color-success)] border-[var(--color-success)]/20 hover:border-[var(--color-success)]/40' 
+                          : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:border-[var(--text-secondary)]/30'
                         }`}
                       >
                         {vehicle.available ? 'Available' : 'Unavailable'}
                       </button>
                     </td>
-                    <td className="p-6 text-right space-x-2">
-                      <button
-                        onClick={() => {
-                            setEditingVehicleId(vehicle.id);
-                            setNewVehicle({
-                                name: vehicle.name,
-                                car_type_id: vehicle.car_type_id,
-                                year: vehicle.year,
-                                seats: vehicle.seats,
-                                transmission: vehicle.transmission,
-                                image_url: vehicle.image_url || '',
-                                available: vehicle.available
-                            });
-                            setShowCreateForm(true);
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                        className="p-2 text-slate-400 hover:text-amber-600 transition-colors"
-                        title="Edit Vehicle"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => deleteVehicleDoc(vehicle.id)}
-                        className="p-2 text-slate-400 hover:text-red-600 transition-colors"
-                        title="Delete Vehicle"
-                      >
-                        🗑️
-                      </button>
+                    <td className="p-6 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <IconButton
+                          icon={<Edit2 className="w-4 h-4" />}
+                          variant="ghost"
+                          onClick={() => {
+                              setEditingVehicleId(vehicle.id);
+                              setNewVehicle({
+                                  name: vehicle.name,
+                                  car_type_id: vehicle.car_type_id,
+                                  year: vehicle.year,
+                                  seats: vehicle.seats,
+                                  transmission: vehicle.transmission,
+                                  image_url: vehicle.image_url || '',
+                                  available: vehicle.available
+                              });
+                              setShowCreateForm(true);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className="text-[var(--text-tertiary)] hover:text-[var(--color-primary-600)] hover:bg-[var(--color-primary-500)]/10"
+                          title="Edit Vehicle"
+                        />
+                        <IconButton
+                          icon={<Trash2 className="w-4 h-4" />}
+                          variant="ghost"
+                          onClick={() => deleteVehicleDoc(vehicle.id)}
+                          className="text-[var(--text-tertiary)] hover:text-[var(--color-error)] hover:bg-[var(--color-error-light)]"
+                          title="Delete Vehicle"
+                        />
+                      </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
                 {vehiclesFiltered.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-12 text-center text-slate-500 font-semibold">
+                    <td colSpan={5} className="p-12 text-center text-[var(--text-secondary)] font-semibold">
                       No vehicles match the current filters.
                     </td>
                   </tr>
                 )}
-              </tbody>
-            </table>
-          </div>
+              </motion.tbody>
+            </AnimatePresence>
+          </table>
         </div>
-      </div>
-    </>
+      </Card>
+
+      <AnimatePresence>
+        {showCreateForm && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-[var(--bg-primary)] rounded-3xl p-8 max-w-2xl w-full shadow-premium border border-[var(--border-subtle)] max-h-[90vh] overflow-y-auto"
+            >
+              <h2 className="text-2xl font-black text-[var(--text-primary)] mb-6">{editingVehicleId ? 'Edit Vehicle' : 'Add New Vehicle'}</h2>
+              <form onSubmit={handleCreateVehicle} className="grid md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-black uppercase text-[var(--text-tertiary)] tracking-widest mb-1.5 block">Vehicle Name / Model</label>
+                  <input
+                    type="text"
+                    value={newVehicle.name}
+                    onChange={(e) => setNewVehicle({...newVehicle, name: e.target.value})}
+                    className="w-full p-4 bg-[var(--bg-secondary)] border-2 border-[var(--border-subtle)] rounded-xl text-sm font-bold text-[var(--text-primary)] focus:border-[var(--color-primary-500)] outline-none transition-all"
+                    placeholder="e.g. Toyota Vios XLE"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-[var(--text-tertiary)] tracking-widest mb-1.5 block">Car Type</label>
+                  <select
+                    value={newVehicle.car_type_id}
+                    onChange={(e) => setNewVehicle({...newVehicle, car_type_id: e.target.value})}
+                    className="w-full p-4 bg-[var(--bg-secondary)] border-2 border-[var(--border-subtle)] rounded-xl text-sm font-bold text-[var(--text-primary)] focus:border-[var(--color-primary-500)] outline-none transition-all"
+                  >
+                    {carTypes.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-[var(--text-tertiary)] tracking-widest mb-1.5 block">Year</label>
+                  <input
+                    type="text"
+                    value={newVehicle.year}
+                    onChange={(e) => setNewVehicle({...newVehicle, year: e.target.value})}
+                    className="w-full p-4 bg-[var(--bg-secondary)] border-2 border-[var(--border-subtle)] rounded-xl text-sm font-bold text-[var(--text-primary)] focus:border-[var(--color-primary-500)] outline-none transition-all"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-[var(--text-tertiary)] tracking-widest mb-1.5 block">Seats</label>
+                  <input
+                    type="number"
+                    value={newVehicle.seats}
+                    onChange={(e) => setNewVehicle({...newVehicle, seats: parseInt(e.target.value)})}
+                    className="w-full p-4 bg-[var(--bg-secondary)] border-2 border-[var(--border-subtle)] rounded-xl text-sm font-bold text-[var(--text-primary)] focus:border-[var(--color-primary-500)] outline-none transition-all"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-[var(--text-tertiary)] tracking-widest mb-1.5 block">Transmission</label>
+                  <select
+                    value={newVehicle.transmission}
+                    onChange={(e) => setNewVehicle({...newVehicle, transmission: e.target.value})}
+                    className="w-full p-4 bg-[var(--bg-secondary)] border-2 border-[var(--border-subtle)] rounded-xl text-sm font-bold text-[var(--text-primary)] focus:border-[var(--color-primary-500)] outline-none transition-all"
+                  >
+                    <option value="Automatic">Automatic</option>
+                    <option value="Manual">Manual</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-black uppercase text-[var(--text-tertiary)] tracking-widest mb-1.5 block">Image URL</label>
+                  <input
+                    type="text"
+                    value={newVehicle.image_url}
+                    onChange={(e) => setNewVehicle({...newVehicle, image_url: e.target.value})}
+                    className="w-full p-4 bg-[var(--bg-secondary)] border-2 border-[var(--border-subtle)] rounded-xl text-sm font-bold text-[var(--text-primary)] focus:border-[var(--color-primary-500)] outline-none transition-all font-mono"
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="md:col-span-2 flex gap-3 mt-4">
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCreateForm(false)}
+                    className="flex-1 border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit"
+                    className="flex-1 bg-[var(--color-primary-600)] hover:bg-[var(--color-primary-700)] text-white shadow-lg"
+                  >
+                    {editingVehicleId ? 'Save Changes' : 'Create Vehicle'}
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

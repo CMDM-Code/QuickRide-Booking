@@ -118,12 +118,14 @@ export function FilterDropdown({ filters, onApply, children }: FilterDropdownPro
                   return (
                     <span
                       key={`${key}-${v}`}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-lg"
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg"
+                      style={{ backgroundColor: "var(--success-bg)", color: "var(--success)" }}
                     >
                       {filter.label}: {opt?.label || v}
                       <button
                         onClick={() => removeFilter(key, v)}
-                        className="hover:text-green-900"
+                        className="hover:opacity-80"
+                        style={{ color: "var(--success)" }}
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -150,7 +152,8 @@ export function FilterDropdown({ filters, onApply, children }: FilterDropdownPro
             })}
             <button
               onClick={handleClear}
-              className="text-xs text-slate-500 hover:text-slate-700 underline"
+              className="text-xs underline"
+              style={{ color: "var(--text-secondary)" }}
             >
               Clear all
             </button>
@@ -159,15 +162,19 @@ export function FilterDropdown({ filters, onApply, children }: FilterDropdownPro
 
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
-            isOpen
-              ? "bg-green-700 text-white"
-              : "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all border ${
+            isOpen ? "" : ""
           }`}
+          style={
+            isOpen
+              ? { backgroundColor: "var(--color-primary)", color: "var(--text-inverse)", borderColor: "var(--color-primary)" }
+              : { backgroundColor: "var(--bg-surface)", color: "var(--text-primary)", borderColor: "var(--border-default)" }
+          }
         >
           <span>Filters</span>
           {activeFilterCount > 0 && (
-            <span className="bg-white text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full">
+            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+              style={{ backgroundColor: "var(--bg-surface)", color: "var(--color-primary)" }}>
               {activeFilterCount}
             </span>
           )}
@@ -177,10 +184,11 @@ export function FilterDropdown({ filters, onApply, children }: FilterDropdownPro
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden">
-          <div className="p-4 border-b border-slate-100 bg-slate-50">
-            <h3 className="font-bold text-slate-900">Filter Options</h3>
-            <p className="text-xs text-slate-500">Select filters and click Apply to narrow results</p>
+        <div className="absolute right-0 top-full mt-2 w-96 rounded-2xl shadow-2xl border z-50 overflow-hidden"
+          style={{ backgroundColor: "var(--bg-surface)", borderColor: "var(--border-subtle)" }}>
+          <div className="p-4 border-b" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-subtle)" }}>
+            <h3 className="font-bold" style={{ color: "var(--text-primary)" }}>Filter Options</h3>
+            <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Select filters and click Apply to narrow results</p>
           </div>
 
           <div className="p-4 space-y-4 max-h-80 overflow-y-auto">
@@ -196,19 +204,20 @@ export function FilterDropdown({ filters, onApply, children }: FilterDropdownPro
 
               return (
               <div key={filter.key}>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <label className="block text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
                   {filter.label}
                   {filter.multiSelect && (
-                    <span className="text-xs text-slate-400 font-normal ml-1">(multi-select)</span>
+                    <span className="text-xs font-normal ml-1" style={{ color: "var(--text-muted)" }}>(multi-select)</span>
                   )}
                 </label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--text-muted)" }} />
                   <input
                     type="text"
                     placeholder={`Search ${filter.label.toLowerCase()}...`}
                     value={filterSearch[filter.key] || ''}
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
+                    className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg outline-none"
+                    style={{ borderColor: "var(--border-default)" }}
                     onChange={(e) => {
                       setFilterSearch((prev) => ({ ...prev, [filter.key]: e.target.value }));
                     }}
@@ -223,11 +232,12 @@ export function FilterDropdown({ filters, onApply, children }: FilterDropdownPro
                     return (
                       <label
                         key={option.value}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors`}
+                        style={
                           isSelected
-                            ? "bg-green-50 text-green-800"
-                            : "hover:bg-slate-50 text-slate-700"
-                        }`}
+                            ? { backgroundColor: "var(--success-bg)", color: "var(--success)" }
+                            : { color: "var(--text-secondary)" }
+                        }
                       >
                         {filter.multiSelect ? (
                           <input
@@ -250,7 +260,7 @@ export function FilterDropdown({ filters, onApply, children }: FilterDropdownPro
                     );
                   })}
                   {visibleOptions.length === 0 && (
-                    <p className="text-xs text-slate-400 py-2">No options match your search</p>
+                    <p className="text-xs py-2" style={{ color: "var(--text-muted)" }}>No options match your search</p>
                   )}
                 </div>
               </div>
@@ -258,22 +268,25 @@ export function FilterDropdown({ filters, onApply, children }: FilterDropdownPro
             })}
           </div>
 
-          <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-3">
+          <div className="p-4 border-t flex gap-3" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-subtle)" }}>
             <button
               onClick={handleApply}
-              className="flex-1 px-4 py-2 bg-green-700 hover:bg-green-800 text-white font-semibold rounded-xl transition-all"
+              className="flex-1 px-4 py-2 text-white font-semibold rounded-xl transition-all"
+              style={{ backgroundColor: "var(--color-primary)" }}
             >
               Apply Filters
             </button>
             <button
               onClick={handleClear}
-              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl transition-all"
+              className="px-4 py-2 font-semibold rounded-xl transition-all"
+              style={{ backgroundColor: "var(--border-default)", color: "var(--text-primary)" }}
             >
               Clear
             </button>
             <button
               onClick={() => setIsOpen(false)}
-              className="px-4 py-2 text-slate-500 hover:text-slate-700 font-semibold rounded-xl transition-all"
+              className="px-4 py-2 font-semibold rounded-xl transition-all"
+              style={{ color: "var(--text-secondary)" }}
             >
               Cancel
             </button>

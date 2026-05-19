@@ -65,7 +65,7 @@ export default function BookingTab({ booking, availability, onBooking, onAvailab
       {/* ── Advanced ── */}
       <button
         onClick={() => setShowAdvanced(v => !v)}
-        className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors pt-1"
+        className="flex items-center gap-2 text-xs font-bold text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors pt-1"
       >
         {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         {showAdvanced ? 'Hide Advanced Settings' : 'Show Advanced Settings'}

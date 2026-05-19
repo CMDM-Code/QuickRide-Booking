@@ -11,6 +11,7 @@ import {
 import { Notification } from "@/lib/types";
 import { authClient } from "@/lib/auth-client";
 import { formatDistanceToNow } from "date-fns";
+import { toSafeDate } from "@/lib/api-utils";
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -50,11 +51,13 @@ export default function NotificationBell() {
     <div className="relative">
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-all"
+        className="relative p-2 rounded-full transition-all"
+        style={{ color: "var(--text-secondary)" }}
       >
         <Bell className="w-6 h-6" />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+          <span className="absolute top-1.5 right-1.5 w-4 h-4 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2"
+          style={{ backgroundColor: "var(--error)", borderColor: "var(--bg-surface)" }}>
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -66,13 +69,15 @@ export default function NotificationBell() {
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
           ></div>
-          <div className="absolute right-0 mt-2 w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <h3 className="font-bold text-slate-900">Notifications</h3>
+          <div className="absolute right-0 mt-2 w-80 md:w-96 rounded-2xl shadow-2xl border z-50 overflow-hidden animate-in fade-in slide-in-from-top-2"
+            style={{ backgroundColor: "var(--bg-surface)", borderColor: "var(--border-subtle)" }}>
+            <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-subtle)" }}>
+              <h3 className="font-bold" style={{ color: "var(--text-primary)" }}>Notifications</h3>
               {unreadCount > 0 && (
                 <button 
                   onClick={handleMarkAllAsRead}
-                  className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                  className="text-xs font-bold"
+                  style={{ color: "var(--info)" }}
                 >
                   Mark all as read
                 </button>
@@ -82,54 +87,61 @@ export default function NotificationBell() {
             <div className="max-h-[400px] overflow-y-auto">
               {notifications.length === 0 ? (
                 <div className="p-12 text-center">
-                  <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Bell className="w-6 h-6 text-slate-300" />
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: "var(--bg-subtle)" }}>
+                    <Bell className="w-6 h-6" style={{ color: "var(--text-muted)" }} />
                   </div>
-                  <p className="text-sm font-medium text-slate-500">No notifications yet</p>
+                  <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>No notifications yet</p>
                 </div>
               ) : (
-                <div className="divide-y divide-slate-50">
+                <div className="divide-y" style={{ borderColor: "var(--border-subtle)" }}>
                   {notifications.map((n) => (
                     <div 
                       key={n.id} 
-                      className={`p-4 flex gap-3 hover:bg-slate-50 transition-colors relative group ${!n.read ? 'bg-blue-50/30' : ''}`}
+                      className={`p-4 flex gap-3 transition-colors relative group ${!n.read ? '' : ''}`}
+                      style={{ backgroundColor: !n.read ? "var(--info-bg)" : "" }}
                     >
                       <div className="mt-1">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${!n.read ? 'bg-white shadow-sm' : 'bg-slate-50'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center`}
+                          style={{ backgroundColor: !n.read ? "var(--bg-surface)" : "var(--bg-subtle)", boxShadow: !n.read ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}>
                           {getIcon(n.type)}
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className={`text-sm font-bold truncate ${!n.read ? 'text-slate-900' : 'text-slate-600'}`}>
+                          <p className={`text-sm font-bold truncate`} style={{ color: !n.read ? "var(--text-primary)" : "var(--text-secondary)" }}>
                             {n.title}
                           </p>
-                          <span className="text-[10px] text-slate-400 whitespace-nowrap mt-0.5">
-                            {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                          <span className="text-[10px] whitespace-nowrap mt-0.5" style={{ color: "var(--text-muted)" }}>
+                            {(() => {
+                              const d = toSafeDate(n.created_at);
+                              return d ? formatDistanceToNow(d, { addSuffix: true }) : 'just now';
+                            })()}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">
+                        <p className="text-xs mt-0.5 line-clamp-2 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
                           {n.message}
                         </p>
                         <div className="flex gap-2 mt-2">
                           {!n.read && (
                             <button 
                               onClick={() => markAsRead(n.id)}
-                              className="text-[10px] font-bold text-blue-600 hover:underline"
+                              className="text-[10px] font-bold hover:underline"
+                              style={{ color: "var(--info)" }}
                             >
                               Mark as read
                             </button>
                           )}
                           <button 
                             onClick={() => deleteNotification(n.id)}
-                            className="text-[10px] font-bold text-red-500 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="text-[10px] font-bold hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{ color: "var(--error)" }}
                           >
                             Delete
                           </button>
                         </div>
                       </div>
                       {!n.read && (
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--info)" }}></div>
                       )}
                     </div>
                   ))}
@@ -137,13 +149,14 @@ export default function NotificationBell() {
               )}
             </div>
             
-            <div className="p-3 border-t border-slate-100 text-center bg-slate-50/30">
+            <div className="p-3 border-t text-center" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-subtle)" }}>
               <button 
                 onClick={() => {
                   setIsOpen(false);
                   window.location.href = "/dashboard/notifications";
                 }}
-                className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
+                className="text-xs font-bold transition-colors"
+                style={{ color: "var(--text-secondary)" }}
               >
                 View all notifications
               </button>

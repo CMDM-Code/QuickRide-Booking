@@ -54,6 +54,7 @@ export interface Message {
   id: string;
   sender_id: string;
   sender_name: string;
+  sender_role?: 'customer' | 'support';
   content: string;
   created_at: string;
   read_by: string[]; // user IDs
@@ -75,16 +76,55 @@ export interface BookingInvite {
   created_at: string;
 }
 
-export interface ThemeColors {
-  primary: string;
-  secondary: string;
-  accent: string;
-  background: string;
-  text: string;
+// ─────────────────────────────────────────────────────────────────────────────
+// THEMING
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ThemeTokens {
+  // ── Brand palette ──────────────────────────────────────────
+  primary: string;               // main interactive / CTA color
+  primary_hover: string;         // darker shade used on hover/active
+  secondary: string;             // secondary interactive color
+  accent: string;                // highlight / accent CTA
+
+  // ── Backgrounds ────────────────────────────────────────────
+  bg_base: string;               // page canvas (was: background)
+  bg_surface: string;            // card / elevated surface
+  bg_subtle: string;             // inputs, table stripes
+  bg_inverse: string;            // dark bar for inverted sections
+
+  // ── Text ───────────────────────────────────────────────────
+  text_primary: string;          // headings / body (was: text)
+  text_secondary: string;        // sub-labels, metadata
+  text_muted: string;            // placeholders, disabled
+  text_inverse: string;          // text on dark/primary backgrounds
+  text_link: string;             // hyperlink color
+
+  // ── Borders ────────────────────────────────────────────────
+  border_subtle: string;         // dividers, light card outlines
+  border_default: string;        // standard input outlines
+  border_strong: string;         // focus rings, selected states
+
+  // ── Semantic states ────────────────────────────────────────
   success: string;
+  success_bg: string;            // badge / pill background
   warning: string;
+  warning_bg: string;
   error: string;
+  error_bg: string;
+  info: string;
+  info_bg: string;
+
+  // ── Layout chrome ──────────────────────────────────────────
+  sidebar_bg: string;
+  sidebar_text: string;
+  sidebar_text_active: string;
+  sidebar_item_active_bg: string;
+  header_bg: string;
 }
+
+/** Back-compat alias so existing imports of ThemeColors still compile */
+export type ThemeColors = ThemeTokens;
 
 export interface BrandingScope {
   admin: boolean;
@@ -98,11 +138,15 @@ export interface BrandingConfig {
   logo_url: string;
   favicon_url?: string;
   login_background_url?: string;
-  light_theme: ThemeColors;
-  dark_theme: ThemeColors;
+  light_theme: ThemeTokens;
+  dark_theme: ThemeTokens;
   scope: BrandingScope;
   updated_at?: any;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOCATIONS & PRICING
+// ─────────────────────────────────────────────────────────────────────────────
 
 export interface LocationLevel {
   id: string;
@@ -227,6 +271,9 @@ export interface Booking {
   created_at: string;
   participants?: BookingParticipant[];
   participant_ids?: string[]; // user IDs
+  price_override?: number;
+  price_override_reason?: string;
+  activity_log?: any[];
   assigned_staff_id?: string; // staff ID
   // Join data
   vehicle?: Vehicle;
