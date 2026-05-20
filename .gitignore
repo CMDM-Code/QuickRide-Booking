@@ -45,3 +45,4 @@ yarn-error.log*
 next-env.d.ts
 .env
 *.db
+AI/secret_api_key.csv
